@@ -335,7 +335,7 @@ A row in `reminders` records a reminder that PayPal sent.
 
 ### 4.8 Environment variables
 
-- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_BASE_URL`, `PAYPAL_WEBHOOK_ID`
+- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_BASE_URL`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_INVOICER_EMAIL` (optional), `PAYPAL_TEST_RECIPIENT` (optional, sandbox tests only)
 - `GEMINI_API_KEY`, `GEMINI_MODEL_PRIMARY`, `GEMINI_MODEL_FALLBACK`, `GEMINI_MAX_CALLS_PER_MINUTE`
 - `DATABASE_URL`
 - `DEMO_PASSWORD`, `ADMIN_TOKEN`, `SESSION_SECRET`
@@ -388,13 +388,13 @@ Put the names in `.env.example`. Do not put real values in the repository.
 | Method | Endpoint | Notes |
 |---|---|---|
 | Token | `POST /v1/oauth2/token` | Client credentials. |
-| CreateDraft | `POST /v2/invoicing/generate-next-invoice-number`, then `POST /v2/invoicing/invoices` | Set the invoicer email from the token owner. Calculate the due date from `DueDays`. |
+| CreateDraft | `POST /v2/invoicing/generate-next-invoice-number`, then `POST /v2/invoicing/invoices` | Set the invoicer email from `PAYPAL_INVOICER_EMAIL`. If it is empty, PayPal uses the owner of the REST app. Calculate the due date from `DueDays`. |
 | Send | `POST /v2/invoicing/invoices/{id}/send` | The payer link exists only after this call. |
 | Remind | `POST /v2/invoicing/invoices/{id}/remind` | |
 | Cancel | `POST /v2/invoicing/invoices/{id}/cancel` | |
 | Get | `GET /v2/invoicing/invoices/{id}` | Read the payer link from `detail.metadata.recipient_view_url`. Confirm this field in the first sandbox reply. |
-| List | `POST /v2/invoicing/search-invoices` | The GET list endpoint has no status filter. Use search with the `status` field. |
-| Search | `POST /v2/invoicing/search-invoices` | |
+| List | `GET /v2/invoicing/invoices` for all statuses, `POST /v2/invoicing/search-invoices` for one status | The GET list endpoint has no status filter. |
+| Search | `POST /v2/invoicing/search-invoices` | The date range filters on the invoice date. |
 | VerifyWebhook | `POST /v1/notifications/verify-webhook-signature` | Put the raw event body into the request without changes. A new JSON encoding of the event can break the check. |
 
 **Done when:** `go test -tags sandbox ./internal/paypal` creates, sends, reminds, and lists a sandbox invoice.
