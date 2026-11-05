@@ -1,0 +1,2 @@
+Invoice Acme Studio (billing@acme-studio.example) for 12.5 hours of
+React work at $60 an hour. Payment due in 14 days. Thanks for the project!

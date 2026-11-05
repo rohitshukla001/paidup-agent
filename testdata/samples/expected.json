@@ -1,0 +1,10 @@
+{
+  "01-chat-message.txt":     {"email": "jane@example.com", "currency": "USD", "total": "450.00", "due_days": 7},
+  "02-hours.txt":            {"email": "billing@acme-studio.example", "currency": "USD", "total": "750.00", "due_days": 14},
+  "03-multi-item.txt":       {"email": "priya.raman@example.org", "currency": "EUR", "total": "450.00", "due_days": 30},
+  "04-whatsapp.txt":         {"email": "tom.baker@example.net", "currency": "GBP", "total": "970.00"},
+  "05-missing-email.txt":    {"currency": "CAD", "total": "1200.00", "due_days": 15, "invalid": "client_email"},
+  "06-handwritten-quote.png": {"email": "maria.lopez@example.com", "currency": "USD", "total": "1580.00", "due_days": 10},
+  "07-receipt-style.png":    {"email": "orders@oaklanecafe.example", "currency": "USD", "total": "260.00", "due_days": 14},
+  "08-sticky-note.png":      {"email": "kenji.sato@example.jp", "currency": "USD", "total": "600.00", "due_days": 5}
+}

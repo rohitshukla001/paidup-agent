@@ -408,17 +408,17 @@ Put the names in `.env.example`. Do not put real values in the repository.
 1. Create one Google Cloud project and one Gemini API key with your personal Google account.
 2. Do not create more keys or more projects to get past the rate limits. This breaks the Google API terms.
 3. In Google AI Studio, find the current Flash model and the current Flash-Lite model. Put their IDs in `.env.example` as the default values for `GEMINI_MODEL_PRIMARY` and `GEMINI_MODEL_FALLBACK`.
-4. Implement `Chat` with the `google.golang.org/genai` SDK. Change each `ToolDecl` into a Gemini function declaration.
+4. Implement `Chat` with the Gemini REST API (`generateContent`) and `net/http`. Do not add the SDK: the REST API keeps the module free of dependencies, and tests can use a local stand-in. Change each `ToolDecl` into a Gemini function declaration.
 5. Return the thought signature of each function call in `FuncCall.Signature`. Send it back unchanged in the next request. Multi-step tool calls can fail without it.
 6. Implement `ExtractInvoice` with structured output. Use the `InvoiceDraft` JSON schema as the response schema.
 7. Limit all Gemini calls together to `GEMINI_MAX_CALLS_PER_MINUTE`. Set the value below the free-tier limit of the primary model.
 8. On HTTP 429, retry one time after 2 seconds. Then use the fallback model. If both models fail, return `ErrBusy`.
 9. Cache the `ExtractInvoice` results by the SHA-256 hash of the input. Keep a maximum of 200 entries in memory.
-10. Add 5 sample texts and 3 sample photos in `testdata/samples`. Use fake names and fake email addresses only.
+10. Add 5 sample texts and 3 sample photos in `testdata/samples`. Use fake names and fake email addresses only. Write the expected values for each sample in `testdata/samples/expected.json`.
 
 **Done when:**
 
-- All 8 samples give a draft that passes `domain.ValidateDraft`.
+- `go test -tags gemini ./internal/llm` passes. Seven samples give a draft that passes `domain.ValidateDraft`. The sample without an email address fails validation on `client_email`.
 - A test with a fake server covers the 429 path.
 
 ### Task 4: Agent service
