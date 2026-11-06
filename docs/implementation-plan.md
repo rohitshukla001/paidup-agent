@@ -430,7 +430,7 @@ Put the names in `.env.example`. Do not put real values in the repository.
 **Steps:**
 
 1. Declare the tools in Section 4.4.
-2. Execute a read tool immediately. Send the result back to the model.
+2. Execute a read tool immediately. Send the result back to the model. If the message has a photo, call `ExtractInvoice` first and add the result to the user text as JSON data.
 3. Allow a maximum of 5 model calls for each user message. Each model call counts as one AI request.
 4. Send one `message.delta` event for each model reply.
 5. For a write tool, call `domain.ValidateDraft` or the checks for that tool. If the check fails, send the error back to the model.

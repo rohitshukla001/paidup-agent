@@ -73,8 +73,8 @@ type generateResponse struct {
 }
 
 // toContents maps chat history to Gemini contents. A user turn carries
-// text, an image, and function results. A model turn carries text and
-// function calls, each with its thought signature.
+// function results, text, and an image, in that order. A model turn
+// carries text and function calls, each with its thought signature.
 func toContents(history []contract.Turn) []content {
 	out := make([]content, 0, len(history))
 	for _, t := range history {
@@ -83,6 +83,17 @@ func toContents(history []contract.Turn) []content {
 			role = "user"
 		}
 		var parts []part
+		// Function results come first, so they follow the model's
+		// calls.
+		for _, fr := range t.Results {
+			resp := fr.Output
+			if resp == nil {
+				resp = map[string]any{}
+			}
+			parts = append(parts, part{FunctionResponse: &functionResponse{
+				Name: fr.Name, Response: resp,
+			}})
+		}
 		if t.Text != "" {
 			parts = append(parts, part{Text: t.Text})
 		}
@@ -97,15 +108,6 @@ func toContents(history []contract.Turn) []content {
 				FunctionCall:     &functionCall{Name: fc.Name, Args: fc.Args},
 				ThoughtSignature: string(fc.Signature),
 			})
-		}
-		for _, fr := range t.Results {
-			resp := fr.Output
-			if resp == nil {
-				resp = map[string]any{}
-			}
-			parts = append(parts, part{FunctionResponse: &functionResponse{
-				Name: fr.Name, Response: resp,
-			}})
 		}
 		if len(parts) == 0 {
 			continue
