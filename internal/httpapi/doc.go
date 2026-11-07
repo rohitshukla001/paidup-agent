@@ -1,10 +1,8 @@
 // Package httpapi serves the REST API, the SSE streams, and the Angular
 // files.
 //
-// Task 6 owns this package. Export:
-//
-//	httpapi.New(cfg httpapi.Config, a contract.Agent, s contract.Store,
-//		p contract.PayPal, b contract.Bus, webhook http.Handler) http.Handler
-//
-// See Task 6 in docs/implementation-plan.md.
+// Task 6 owns this package. Routes are in Section 4.5 of
+// docs/implementation-plan.md. Every /api route except login, the PayPal
+// webhook, and the demo reset needs the signed session cookie that login
+// sets. Errors are JSON: {"code": "...", "message": "..."}.
 package httpapi

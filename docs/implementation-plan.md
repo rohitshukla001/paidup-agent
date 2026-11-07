@@ -284,6 +284,7 @@ Error codes: `rate_limited`, `busy`, `validation`, `expired`, `not_found`, `unau
 | Method and path | Request | Reply |
 |---|---|---|
 | `POST /api/login` | `{"password": "..."}` | 204 and a signed session cookie |
+| `GET /api/session` | None | 204 if the session cookie is valid, 401 if not |
 | `POST /api/chat` | Multipart: field `text`, optional field `image` | SSE stream |
 | `POST /api/actions/{id}/approve` | None | SSE stream |
 | `POST /api/actions/{id}/reject` | None | 204 |
