@@ -1,0 +1,22 @@
+# Local Postgres for development and for the store tests.
+#   docker compose up -d db
+# The app uses the "paidup" database; the tests use "paidup_test".
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: paidup
+      POSTGRES_PASSWORD: paidup
+      POSTGRES_DB: paidup
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/initdb.sql:/docker-entrypoint-initdb.d/initdb.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "paidup"]
+      interval: 2s
+      retries: 15
+
+volumes:
+  pgdata:

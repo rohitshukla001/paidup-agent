@@ -155,7 +155,8 @@ func (s *Store) SetActionResult(_ context.Context, id string, to domain.ActionSt
 func (s *Store) HasPendingAction(_ context.Context, tool, invoiceID string) (bool, error) {
 	defer s.lock()()
 	for _, a := range s.actions {
-		if a.Status == domain.ActionPending && a.Tool == tool && a.InvoiceID == invoiceID {
+		if a.Status == domain.ActionPending && a.Tool == tool &&
+			a.InvoiceID == invoiceID && a.ExpiresAt.After(s.Clock.now()) {
 			return true, nil
 		}
 	}

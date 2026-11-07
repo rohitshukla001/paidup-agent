@@ -115,7 +115,7 @@ func TestStoreEventsRemindersAndPending(t *testing.T) {
 	if _, ok, _ := s.LastReminder(ctx, "INV-1"); !ok {
 		t.Fatal("reminder not found")
 	}
-	_ = s.SaveAction(ctx, domain.PendingAction{ID: "a1", Tool: domain.ToolProposeReminder, InvoiceID: "INV-1", Status: domain.ActionPending})
+	_ = s.SaveAction(ctx, domain.PendingAction{ID: "a1", Tool: domain.ToolProposeReminder, InvoiceID: "INV-1", Status: domain.ActionPending, ExpiresAt: time.Now().Add(time.Hour)})
 	if has, _ := s.HasPendingAction(ctx, domain.ToolProposeReminder, "INV-1"); !has {
 		t.Fatal("pending reminder not found")
 	}

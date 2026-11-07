@@ -117,6 +117,7 @@ type Store interface {
 	// It returns false when the status was not "from".
 	TransitionAction(ctx context.Context, id string, from, to domain.ActionStatus) (bool, error)
 	SetActionResult(ctx context.Context, id string, to domain.ActionStatus, result json.RawMessage) error
+	// HasPendingAction reports a PENDING action that has not expired.
 	HasPendingAction(ctx context.Context, tool, invoiceID string) (bool, error)
 
 	UpsertInvoice(ctx context.Context, inv domain.Invoice) error

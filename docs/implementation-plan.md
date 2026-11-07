@@ -452,14 +452,14 @@ Put the names in `.env.example`. Do not put real values in the repository.
 
 ### Task 5: Database store
 
-**Owns:** `internal/store/postgres`, `migrations`.
+**Owns:** `internal/store/postgres`, `migrations`, `docker-compose.yml`, `scripts/initdb.sql`.
 
 **Steps:**
 
-1. Write the migrations for the tables in Section 4.7. Use `goose`.
-2. Implement `contract.Store` with `pgx`.
+1. Write the migrations for the tables in Section 4.7 as numbered SQL files. Embed them, and run each one time at startup in name order. A table records the versions that ran.
+2. Implement `contract.Store` with `database/sql` and the `github.com/lib/pq` driver. The driver has no other dependencies.
 3. Implement `TransitionAction` as one `UPDATE ... WHERE id = $1 AND status = $2`.
-4. Add a `docker-compose.yml` with Postgres for local tests.
+4. Add a `docker-compose.yml` with Postgres for local development. It also creates the `paidup_test` database for the tests.
 5. Write a test for each method. Put the tests behind the build tag `pg`, so that the `go.yml` workflow does not need a database.
 
 **Done when:**
