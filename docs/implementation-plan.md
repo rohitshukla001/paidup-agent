@@ -532,9 +532,9 @@ The webhook simulator in the PayPal dashboard sends mock events. A mock event ca
 
 ### Task 8: Angular frontend
 
-**Owns:** `frontend`, `.github/workflows/frontend.yml`.
+**Owns:** `frontend`.
 
-**Uses:** Sections 3.2 and 4.5 only. During development, use a mock backend: an HTTP interceptor with fixtures. An environment flag turns the mock on and off.
+**Uses:** Sections 3.2 and 4.5 only. During development, use a mock backend: a class that has the same methods as the real API client and keeps fake data in the browser. An HTTP interceptor cannot do this job, because the chat and approve streams use `fetch`. The `mock` build configuration turns the mock on (`ng serve --configuration mock`, password `demo`).
 
 **Steps:**
 
@@ -555,7 +555,6 @@ The webhook simulator in the PayPal dashboard sends mock events. A mock event ca
 11. Make the pages work at a screen width of 360 px.
 12. Make the pages work with the keyboard only.
 13. Set the build output path to `web/` at the repository root.
-14. Add the workflow `frontend.yml`. It runs the Angular build.
 
 **Done when:** the demo script in Section 3.2 works from start to end with the mock backend.
 
