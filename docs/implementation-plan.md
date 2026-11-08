@@ -520,7 +520,7 @@ The webhook simulator in the PayPal dashboard sends mock events. A mock event ca
 2. Find the invoices in the `overdue` bucket.
 3. Skip an invoice if PayPal sent a reminder less than 72 hours ago (`LastReminder`).
 4. Skip an invoice if it has a pending `propose_reminder` action (`HasPendingAction`).
-5. For each invoice that is not skipped, write a reminder note with `LLM.Chat`. These calls do not count against a session.
+5. For each invoice that is not skipped, write a reminder note with `LLM.Chat`. These calls do not count against a session. If the call fails, use a template note.
 6. Save the note as a `propose_reminder` action with an empty `SessionID`.
 7. Publish `action.proposed`.
 

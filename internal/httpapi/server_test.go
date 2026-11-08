@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -55,7 +56,24 @@ func (a *stubAgent) Approve(_ context.Context, sid, id string, emit func(domain.
 	return nil
 }
 
-func (a *stubAgent) Reject(context.Context, string, string) error { return a.rejectErr }
+func (a *stubAgent) Reject(context.Context, string, string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.rejectErr
+}
+
+func (a *stubAgent) setRejectErr(err error) {
+	a.mu.Lock()
+	a.rejectErr = err
+	a.mu.Unlock()
+}
+
+// last returns what the last HandleMessage call received.
+func (a *stubAgent) last() (sid, text, mime string, image []byte) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.lastSID, a.lastText, a.lastMIME, a.lastImage
+}
 
 type testEnv struct {
 	srv   *httptest.Server
@@ -64,7 +82,7 @@ type testEnv struct {
 	pp    *fakes.PayPal
 	bus   contract.Bus
 	now   time.Time
-	hooks int
+	hooks atomic.Int32
 }
 
 func newTestEnv(t *testing.T, mut ...func(*Config)) *testEnv {
@@ -80,7 +98,7 @@ func newTestEnv(t *testing.T, mut ...func(*Config)) *testEnv {
 		m(&cfg)
 	}
 	hook := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		e.hooks++
+		e.hooks.Add(1)
 		w.WriteHeader(http.StatusOK)
 	})
 	e.srv = httptest.NewServer(New(cfg, e.agent, e.store, e.pp, e.bus, hook))
@@ -220,9 +238,10 @@ func TestChatStreamsAgentEvents(t *testing.T) {
 		string(got[0].Data) != `{"text":"Hi"}` || got[2].Type != domain.EventMessageDone {
 		t.Fatalf("events = %+v", got)
 	}
-	if e.agent.lastText != "bill jane" || e.agent.lastMIME != "image/png" ||
-		len(e.agent.lastImage) != len(pngBytes) || e.agent.lastSID == "" {
-		t.Fatalf("agent got text %q mime %q", e.agent.lastText, e.agent.lastMIME)
+	sid, text, mime, image := e.agent.last()
+	if text != "bill jane" || mime != "image/png" ||
+		len(image) != len(pngBytes) || sid == "" {
+		t.Fatalf("agent got text %q mime %q", text, mime)
 	}
 	select {
 	case ev := <-sub:
@@ -286,11 +305,11 @@ func TestApproveAndReject(t *testing.T) {
 	if r := e.do(t, "POST", "/api/actions/a1/reject", cookie, nil, ""); r.StatusCode != 204 {
 		t.Fatalf("reject: %d", r.StatusCode)
 	}
-	e.agent.rejectErr = fmt.Errorf("%w: gone", contract.ErrNotFound)
+	e.agent.setRejectErr(fmt.Errorf("%w: gone", contract.ErrNotFound))
 	if r := e.do(t, "POST", "/api/actions/a1/reject", cookie, nil, ""); r.StatusCode != 404 {
 		t.Fatalf("reject missing: %d", r.StatusCode)
 	}
-	e.agent.rejectErr = fmt.Errorf("%w: already handled", contract.ErrValidation)
+	e.agent.setRejectErr(fmt.Errorf("%w: already handled", contract.ErrValidation))
 	if r := e.do(t, "POST", "/api/actions/a1/reject", cookie, nil, ""); r.StatusCode != 400 {
 		t.Fatalf("reject handled: %d", r.StatusCode)
 	}
@@ -302,8 +321,8 @@ func TestListActionsFiltersSessionAndExpiry(t *testing.T) {
 	ctx := context.Background()
 	// A chat request tells the stub agent this session's ID.
 	body, ctype := multipartBody(t, "hi", nil)
-	e.do(t, "POST", "/api/chat", cookie, body, ctype)
-	sid := e.agent.lastSID
+	readAll(e.do(t, "POST", "/api/chat", cookie, body, ctype))
+	sid, _, _, _ := e.agent.last()
 	if sid == "" {
 		t.Fatal("no session ID")
 	}
@@ -414,8 +433,8 @@ func TestEventStream(t *testing.T) {
 func TestWebhookResetHealthAndUnknown(t *testing.T) {
 	e := newTestEnv(t)
 	if r := e.do(t, "POST", "/api/webhooks/paypal", "", strings.NewReader("{}"),
-		""); r.StatusCode != 200 || e.hooks != 1 {
-		t.Fatalf("webhook: %d, hooks %d", r.StatusCode, e.hooks)
+		""); r.StatusCode != 200 || e.hooks.Load() != 1 {
+		t.Fatalf("webhook: %d, hooks %d", r.StatusCode, e.hooks.Load())
 	}
 
 	_ = e.store.UpsertInvoice(context.Background(), domain.Invoice{ID: "I"})
