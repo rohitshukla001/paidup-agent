@@ -68,6 +68,15 @@ func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Header: r.Header.Clone(), Body: body,
 	})
 	f.mu.Unlock()
+	// Like the real API: a POST without a JSON content type gets a 415,
+	// even when it has no body.
+	if r.Method == http.MethodPost &&
+		r.Header.Get("Content-Type") != "application/json" {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		io.WriteString(w, `{"name":"UNSUPPORTED_MEDIA_TYPE",`+
+			`"message":"The request payload is not supported"}`)
+		return
+	}
 	status, out := http.StatusOK, "{}"
 	if f.handle != nil {
 		status, out = f.handle(r, body)

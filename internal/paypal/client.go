@@ -191,7 +191,9 @@ func (c *Client) send(ctx context.Context, cl call, token string,
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	if payload != nil {
+	// PayPal answers 415 to a POST without this header, also when the
+	// POST has no body, such as generate-next-invoice-number.
+	if payload != nil || cl.method == http.MethodPost {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if cl.requestID != "" {
