@@ -1,8 +1,9 @@
 // Command server runs PaidUp.
 //
-// Task 1 wrote this file with fakes for every dependency. Task 9 owns it now:
-// when a task is complete, replace its fake in wire() with the constructor
-// from Section 4.3 of docs/implementation-plan.md.
+// Task 9 owns this file. wire() builds the real PayPal client, Gemini
+// client, and Postgres store from the environment. On a local machine a
+// missing setting falls back to the in-memory fake, so the app starts with
+// no credentials. On Render (RENDER is set) every setting is required.
 package main
 
 import (
@@ -15,11 +16,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"paidup-agent/internal/agent"
 	"paidup-agent/internal/contract"
+	"paidup-agent/internal/events"
 	"paidup-agent/internal/fakes"
+	"paidup-agent/internal/httpapi"
+	"paidup-agent/internal/jobs"
+	"paidup-agent/internal/llm"
+	"paidup-agent/internal/paypal"
+	"paidup-agent/internal/store/postgres"
+	"paidup-agent/internal/webhook"
 )
 
 func main() {
@@ -38,47 +48,119 @@ type deps struct {
 	Store  contract.Store
 	Agent  contract.Agent
 	Bus    contract.Bus
+	Fakes  []string // names of the parts that run on fakes
 }
 
-// wire builds the dependencies. Every one is a fake until Task 9 swaps it.
-func wire(_ context.Context, _ func(string) string) (deps, error) {
-	return deps{
-		LLM:    &fakes.LLM{},
-		PayPal: fakes.NewPayPal(),
-		Store:  fakes.NewStore(),
-		Agent:  fakes.Agent{},
-		Bus:    fakes.NewBus(),
-	}, nil
+// wire builds the dependencies. strict (on Render) turns a missing
+// setting into an error instead of a fake.
+func wire(ctx context.Context, getenv func(string) string, strict bool) (deps, error) {
+	var d deps
+	var missing []string
+	need := func(part string, vars ...string) bool {
+		var absent []string
+		for _, v := range vars {
+			if getenv(v) == "" {
+				absent = append(absent, v)
+			}
+		}
+		if len(absent) == 0 {
+			return true
+		}
+		missing = append(missing, absent...)
+		d.Fakes = append(d.Fakes, part)
+		return false
+	}
+
+	if need("PayPal", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET") {
+		d.PayPal = paypal.New(paypal.ConfigFromEnv(getenv))
+	} else {
+		d.PayPal = fakes.NewPayPal()
+	}
+
+	if need("Gemini", "GEMINI_API_KEY", "GEMINI_MODEL_PRIMARY") {
+		l, err := llm.New(ctx, llm.ConfigFromEnv(getenv))
+		if err != nil {
+			return d, err
+		}
+		d.LLM = l
+	} else {
+		d.LLM = &fakes.LLM{}
+	}
+
+	if need("Postgres", "DATABASE_URL") {
+		s, err := postgres.New(ctx, getenv("DATABASE_URL"))
+		if err != nil {
+			return d, err
+		}
+		d.Store = s
+	} else {
+		d.Store = fakes.NewStore()
+	}
+
+	need("login", "DEMO_PASSWORD", "SESSION_SECRET")
+	// PAYPAL_WEBHOOK_ID is not required: it exists only after the first
+	// deploy gives the app a URL. Until it is set, webhooks get a 500 and
+	// the dashboard's refresh button still works.
+	if getenv("PAYPAL_WEBHOOK_ID") == "" {
+		slog.Warn("PAYPAL_WEBHOOK_ID is not set; PayPal webhooks will fail")
+	}
+	if strict && len(missing) > 0 {
+		return d, fmt.Errorf("missing settings: %s", strings.Join(missing, ", "))
+	}
+
+	d.Bus = events.NewBus()
+	d.Agent = agent.New(d.LLM, d.PayPal, d.Store)
+	return d, nil
 }
 
-// newHandler returns the HTTP routes. Task 9 replaces the body with httpapi.New
-// when Task 6 is complete.
-func newHandler(_ deps) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = io.WriteString(w, "ok\n")
-	})
-	return mux
+// newHandler returns every HTTP route.
+func newHandler(d deps, getenv func(string) string, onRender bool) http.Handler {
+	cfg := httpapi.ConfigFromEnv(getenv)
+	cfg.WebDir = getenv("WEB_DIR")
+	cfg.CookieSecure = onRender
+	if cfg.SessionSecret == "" && !onRender {
+		// Local runs without a .env still get a working login cookie.
+		cfg.SessionSecret = "local-development-only"
+	}
+	return httpapi.New(cfg, d.Agent, d.Store, d.PayPal, d.Bus,
+		webhook.New(d.PayPal, d.Store, d.Bus))
 }
 
 // run starts the server and blocks until ctx ends. If ready is not nil, run
 // sends the listen address on it when the server accepts connections.
-func run(ctx context.Context, getenv func(string) string, logOut io.Writer, ready chan<- string) error {
+func run(ctx context.Context, getenv func(string) string, logOut io.Writer,
+	ready chan<- string) error {
 	log := slog.New(slog.NewJSONHandler(logOut, nil))
+	slog.SetDefault(log)
 
 	port := getenv("PORT") // Render sets PORT.
 	if port == "" {
 		port = "8080"
 	}
+	onRender := getenv("RENDER") != "" // Render sets RENDER=true.
 
-	d, err := wire(ctx, getenv)
+	d, err := wire(ctx, getenv, onRender)
 	if err != nil {
 		return fmt.Errorf("wire dependencies: %w", err)
 	}
+	if len(d.Fakes) > 0 {
+		log.Warn("running with in-memory fakes; set the variables in "+
+			".env.example for the real services", "fakes", d.Fakes)
+	}
 
+	jobCtx, stopJob := context.WithCancel(ctx)
+	defer stopJob()
+	if getenv("REMINDER_JOB") != "off" {
+		go jobs.NewReminderJob(d.PayPal, d.Store, d.LLM, d.Bus).Run(jobCtx)
+	}
+
+	// Cancelling baseCtx at shutdown ends every request context, so open
+	// SSE streams close instead of holding the shutdown.
+	baseCtx, cancelBase := context.WithCancel(context.Background())
+	defer cancelBase()
 	srv := &http.Server{
-		Handler:           newHandler(d),
+		BaseContext:       func(net.Listener) context.Context { return baseCtx },
+		Handler:           newHandler(d, getenv, onRender),
 		ReadHeaderTimeout: 10 * time.Second,
 		// No WriteTimeout: SSE streams stay open for a long time.
 		IdleTimeout: 120 * time.Second,
@@ -106,6 +188,8 @@ func run(ctx context.Context, getenv func(string) string, logOut io.Writer, read
 	}
 
 	log.Info("server stopping")
+	stopJob()
+	cancelBase()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {

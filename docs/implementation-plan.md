@@ -566,11 +566,11 @@ The webhook simulator in the PayPal dashboard sends mock events. A mock event ca
 
 1. Create a personal Render account.
 2. Claim the $50 in Render credits from the Render page of the hackathon.
-3. Write a multi-stage `Dockerfile`. Stage 1 builds `frontend` if it exists. Stage 2 builds the Go binary. Stage 3 is a small runtime image.
+3. Write a multi-stage `Dockerfile`. Stage 1 builds `frontend`. Stage 2 builds the Go binary. Stage 3 is a small runtime image.
 4. Write `render.yaml` with one paid web service and one paid Postgres database. Use `/healthz` for the health check.
 5. Do not use a free Render database. A free database expires after a fixed period, and the demo must work until judging ends.
 6. Deploy the Task 1 skeleton now to get the public URL.
-7. When a task is complete, replace its fake in `main.go` with the constructor from Section 4.3. Run the migrations at startup.
+7. Wire the constructors from Section 4.3 in `main.go`. The store runs the migrations at startup. On a local machine, a missing setting falls back to the in-memory fake. On Render, every setting except `PAYPAL_WEBHOOK_ID` is required, because the webhook ID exists only after the first deploy.
 8. Write `scripts/e2e.sh`. It runs the demo script from Section 3.2 against the deployed URL.
 9. In the PayPal app, add a webhook for `<URL>/api/webhooks/paypal`. Subscribe to the event types in Task 7. Set `PAYPAL_WEBHOOK_ID`.
 10. Keep the service and the database on until 16 Dec 2026 (IST). Judging ends on 15 Dec 2026 at 8:00 AM PT, which is 9:30 PM IST.
