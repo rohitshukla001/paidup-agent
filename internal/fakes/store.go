@@ -163,8 +163,22 @@ func (s *Store) HasPendingAction(_ context.Context, tool, invoiceID string) (boo
 	return false, nil
 }
 
+// UpsertInvoice applies the same rule as the Postgres store: an older
+// copy does not replace a newer one, and an empty payer link keeps the
+// cached one.
 func (s *Store) UpsertInvoice(_ context.Context, inv domain.Invoice) error {
 	defer s.lock()()
+	if inv.UpdatedAt.IsZero() {
+		inv.UpdatedAt = s.Clock.now()
+	}
+	if cur, ok := s.invoices[inv.ID]; ok {
+		if !domain.IsNewerCopy(cur, inv) {
+			return nil
+		}
+		if inv.PayerViewURL == "" {
+			inv.PayerViewURL = cur.PayerViewURL
+		}
+	}
 	s.invoices[inv.ID] = inv
 	return nil
 }

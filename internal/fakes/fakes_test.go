@@ -176,3 +176,19 @@ func TestStoreInvoiceOrderIsNumeric(t *testing.T) {
 		t.Fatalf("order = %v", got)
 	}
 }
+
+func TestStoreKeepsTheCopyFurtherAlong(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore()
+	t1 := time.Date(2026, 11, 9, 14, 47, 0, 0, time.UTC)
+	_ = s.UpsertInvoice(ctx, domain.Invoice{ID: "I", Status: "SENT",
+		PayerViewURL: "https://pay", UpdatedAt: t1.Add(time.Minute)})
+	_ = s.UpsertInvoice(ctx, domain.Invoice{ID: "I", Status: "CANCELLED",
+		UpdatedAt: t1})
+	_ = s.UpsertInvoice(ctx, domain.Invoice{ID: "I", Status: "SENT",
+		UpdatedAt: t1.Add(time.Hour)})
+	got, _ := s.ListInvoices(ctx, "")
+	if got[0].Status != "CANCELLED" || got[0].PayerViewURL != "https://pay" {
+		t.Fatalf("cached = %+v", got[0])
+	}
+}

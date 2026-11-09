@@ -157,3 +157,31 @@ func TestNewID(t *testing.T) {
 		t.Fatalf("bad IDs %q %q", a, b)
 	}
 }
+
+func TestIsNewerCopy(t *testing.T) {
+	t1 := time.Date(2026, 11, 9, 14, 47, 0, 0, time.UTC)
+	t2 := t1.Add(3 * time.Minute)
+	inv := func(status string, at time.Time) Invoice {
+		return Invoice{Status: status, UpdatedAt: at}
+	}
+	tests := []struct {
+		name      string
+		cur, next Invoice
+		want      bool
+	}{
+		// The live bug: PayPal kept its update time on cancel, while the
+		// cached SENT copy had a later read time.
+		{"cancel with an older time", inv("SENT", t2), inv("CANCELLED", t1), true},
+		{"paid with an older time", inv("SENT", t2), inv("PAID", t1), true},
+		{"stale SENT after PAID", inv("PAID", t1), inv("SENT", t2), false},
+		{"same rank, later time", inv("SENT", t1), inv("UNPAID", t2), true},
+		{"same rank, older time", inv("SENT", t2), inv("SENT", t1), false},
+		{"same rank, same time", inv("SENT", t1), inv("SENT", t1), true},
+		{"refund after paid", inv("PAID", t2), inv("REFUNDED", t1), true},
+	}
+	for _, tt := range tests {
+		if got := IsNewerCopy(tt.cur, tt.next); got != tt.want {
+			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

@@ -234,6 +234,29 @@ func TestInvoiceCache(t *testing.T) {
 	}
 }
 
+func TestCancelReplacesSentWithALaterTime(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	t1 := time.Date(2026, 11, 9, 14, 47, 0, 0, time.UTC)
+	sent := domain.Invoice{ID: "INV-2", Number: "0002", Status: "SENT",
+		Currency: "USD", Total: "1580.00", UpdatedAt: t1.Add(3 * time.Minute)}
+	_ = s.UpsertInvoice(ctx, sent)
+	cancelled := sent
+	cancelled.Status, cancelled.UpdatedAt = "CANCELLED", t1
+	_ = s.UpsertInvoice(ctx, cancelled)
+
+	got, _ := s.ListInvoices(ctx, "")
+	if len(got) != 1 || got[0].Status != "CANCELLED" {
+		t.Fatalf("cached = %+v, want CANCELLED", got)
+	}
+	stale := sent
+	stale.UpdatedAt = t1.Add(time.Hour)
+	_ = s.UpsertInvoice(ctx, stale)
+	if got, _ := s.ListInvoices(ctx, ""); got[0].Status != "CANCELLED" {
+		t.Fatalf("a later SENT copy replaced CANCELLED: %+v", got[0])
+	}
+}
+
 func TestInvoiceOrderIsNumeric(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()

@@ -280,17 +280,27 @@ func (s *Store) HasPendingAction(ctx context.Context, tool,
 	return ok, wrap("has pending action", err)
 }
 
-// UpsertInvoice keeps the newest copy: a row with a later updated_at is
-// not overwritten by an older read.
-func (s *Store) UpsertInvoice(ctx context.Context, inv domain.Invoice) error {
-	if inv.UpdatedAt.IsZero() {
-		inv.UpdatedAt = time.Now()
+// rankSQL returns a SQL expression that gives the rank of the status in
+// col, from the same table as domain.StatusRank.
+func rankSQL(col string) string {
+	ranks := domain.StatusRanks()
+	names := make([]string, 0, len(ranks))
+	for n := range ranks {
+		names = append(names, n)
 	}
-	var due sql.NullTime
-	if !inv.DueDate.IsZero() {
-		due = sql.NullTime{Time: inv.DueDate, Valid: true}
+	sort.Strings(names)
+	var b strings.Builder
+	b.WriteString("CASE " + col)
+	for _, n := range names {
+		fmt.Fprintf(&b, " WHEN '%s' THEN %d", n, ranks[n])
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO invoice_cache
+	b.WriteString(" ELSE 1 END")
+	return b.String()
+}
+
+// upsertInvoiceSQL keeps the newer copy by domain.IsNewerCopy: a status
+// further along wins, and for the same rank the later updated_at wins.
+var upsertInvoiceSQL = `INSERT INTO invoice_cache
 		(id, number, status, client_name, client_email, currency, total,
 		 due_date, payer_view_url, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -304,7 +314,22 @@ func (s *Store) UpsertInvoice(ctx context.Context, inv domain.Invoice) error {
 				THEN EXCLUDED.payer_view_url
 				ELSE invoice_cache.payer_view_url END,
 			updated_at = EXCLUDED.updated_at
-		WHERE invoice_cache.updated_at <= EXCLUDED.updated_at`,
+		WHERE ` + rankSQL("EXCLUDED.status") + ` > ` +
+	rankSQL("invoice_cache.status") + `
+		OR (` + rankSQL("EXCLUDED.status") + ` = ` +
+	rankSQL("invoice_cache.status") + `
+			AND invoice_cache.updated_at <= EXCLUDED.updated_at)`
+
+// UpsertInvoice keeps the newest copy. See upsertInvoiceSQL.
+func (s *Store) UpsertInvoice(ctx context.Context, inv domain.Invoice) error {
+	if inv.UpdatedAt.IsZero() {
+		inv.UpdatedAt = time.Now()
+	}
+	var due sql.NullTime
+	if !inv.DueDate.IsZero() {
+		due = sql.NullTime{Time: inv.DueDate, Valid: true}
+	}
+	_, err := s.db.ExecContext(ctx, upsertInvoiceSQL,
 		inv.ID, inv.Number, inv.Status, inv.ClientName, inv.ClientEmail,
 		inv.Currency, inv.Total, due, inv.PayerViewURL, inv.UpdatedAt)
 	return wrap("upsert invoice", err)

@@ -181,6 +181,54 @@ func Bucket(inv Invoice, now time.Time) string {
 	}
 }
 
+// statusRanks orders PayPal invoice statuses by how far along the invoice
+// is. A status never moves to a lower rank.
+var statusRanks = map[string]int{
+	"DRAFT":              0,
+	"SCHEDULED":          1,
+	"SENT":               1,
+	"UNPAID":             1,
+	"PAYMENT_PENDING":    2,
+	"PARTIALLY_PAID":     2,
+	"PAID":               3,
+	"MARKED_AS_PAID":     3,
+	"CANCELLED":          3,
+	"PARTIALLY_REFUNDED": 4,
+	"REFUNDED":           5,
+	"MARKED_AS_REFUNDED": 5,
+}
+
+// StatusRank returns the rank of a PayPal status. An unknown status
+// ranks with SENT.
+func StatusRank(status string) int {
+	if r, ok := statusRanks[status]; ok {
+		return r
+	}
+	return 1
+}
+
+// StatusRanks returns a copy of the rank table, for code that must apply
+// the same rule in SQL.
+func StatusRanks() map[string]int {
+	out := make(map[string]int, len(statusRanks))
+	for k, v := range statusRanks {
+		out[k] = v
+	}
+	return out
+}
+
+// IsNewerCopy reports whether next should replace cur in the invoice
+// cache. A status further along wins. For the same rank, the later
+// UpdatedAt wins. PayPal does not always move its update time, for
+// example on cancel, so the time alone is not enough.
+func IsNewerCopy(cur, next Invoice) bool {
+	rc, rn := StatusRank(cur.Status), StatusRank(next.Status)
+	if rc != rn {
+		return rn > rc
+	}
+	return !next.UpdatedAt.Before(cur.UpdatedAt)
+}
+
 // ValidPeriod reports whether p is a period that Summarize accepts.
 func ValidPeriod(p string) bool {
 	switch p {
