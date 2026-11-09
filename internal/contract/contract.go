@@ -140,6 +140,8 @@ type Agent interface {
 	HandleMessage(ctx context.Context, sessionID, text string, image []byte, mimeType string, emit func(domain.Event)) error
 	Approve(ctx context.Context, sessionID, actionID string, emit func(domain.Event)) error
 	Reject(ctx context.Context, sessionID, actionID string) error
+	// History returns the session's chat for display, oldest first.
+	History(ctx context.Context, sessionID string) ([]domain.ChatItem, error)
 }
 
 // Bus fans out events to live dashboard clients. Task 6 implements it.

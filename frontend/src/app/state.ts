@@ -58,6 +58,9 @@ export class AppState {
   async start(): Promise<void> {
     await this.reload();
     try {
+      if (this.messages().length === 0) {
+        await this.restoreChat();
+      }
       for (const a of await this.api.actions('PENDING')) {
         this.upsertCard(a);
       }
@@ -70,6 +73,25 @@ export class AppState {
 
   stop(): void {
     this.stream?.unsubscribe();
+  }
+
+  // restoreChat shows the saved chat again after a page reload.
+  private async restoreChat(): Promise<void> {
+    const [items, actions] = await Promise.all([this.api.history(), this.api.actions('')]);
+    const byId = new Map(actions.map((a) => [a.id, a]));
+    for (const item of items) {
+      if (item.role === 'card') {
+        const a = item.action_id ? byId.get(item.action_id) : undefined;
+        if (a) {
+          this.upsertCard(a);
+          this.push({ role: 'card', cardId: a.id });
+        }
+      } else if (item.role === 'user') {
+        this.push({ role: 'user', text: item.text, imageName: item.photo ? 'attached' : undefined });
+      } else {
+        this.push({ role: 'assistant', text: item.text });
+      }
+    }
   }
 
   async reload(): Promise<void> {
@@ -218,7 +240,7 @@ export class AppState {
     const before = this.invoices().find((i) => i.id === inv.id);
     this.invoices.update((list) => {
       const rest = list.filter((i) => i.id !== inv.id);
-      return [inv, ...rest].sort((a, b) => b.number.localeCompare(a.number));
+      return [inv, ...rest].sort((a, b) => byNumberDesc(a.number, b.number));
     });
     if (!before) {
       this.log(`Invoice ${inv.number} for ${inv.client_name} is ${inv.status}.`);
@@ -232,10 +254,7 @@ export class AppState {
   }
 
   private upsertCard(a: PendingAction): void {
-    this.cards.update((all) => ({
-      ...all,
-      [a.id]: all[a.id] ?? { action: a, state: a.status === 'PENDING' ? 'pending' : 'done' },
-    }));
+    this.cards.update((all) => ({ ...all, [a.id]: all[a.id] ?? cardFrom(a) }));
   }
 
   private patchCard(id: string, patch: Partial<Card>): void {
@@ -259,6 +278,31 @@ export class AppState {
     const msg = err instanceof Error ? err.message : 'Something went wrong.';
     this.loadError.set(msg);
   }
+}
+
+// cardFrom turns a saved action into a card in the same state.
+export function cardFrom(a: PendingAction): Card {
+  switch (a.status) {
+    case 'PENDING':
+      return { action: a, state: Date.parse(a.expires_at) <= Date.now() ? 'expired' : 'pending' };
+    case 'DONE':
+      return { action: a, state: 'done', invoice: a.result?.invoice };
+    case 'REJECTED':
+      return { action: a, state: 'rejected' };
+    case 'EXPIRED':
+      return { action: a, state: 'expired' };
+    case 'FAILED':
+      return { action: a, state: 'failed', error: a.result?.error };
+    default:
+      // APPROVED with no result: the server stopped during the PayPal calls.
+      return { action: a, state: 'failed', error: 'This card did not finish. Check the invoices.' };
+  }
+}
+
+// byNumberDesc sorts invoice numbers newest first, so "10" comes before
+// "9". It matches the server's order.
+export function byNumberDesc(a: string, b: string): number {
+  return b.length - a.length || (b > a ? 1 : b < a ? -1 : 0);
 }
 
 export function describe(a: PendingAction): string {

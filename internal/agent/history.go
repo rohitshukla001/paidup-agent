@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"paidup-agent/internal/contract"
 	"paidup-agent/internal/domain"
@@ -69,7 +70,7 @@ func (s *Service) addNote(ctx context.Context, sessionID, note string) {
 		return
 	}
 	if err := s.store.AddMessage(ctx, domain.Message{SessionID: sessionID,
-		Role: "user", Content: "[System note: " + note + "]",
+		Role: "user", Content: systemNotePrefix + note + "]",
 		CreatedAt: s.opt.Now()}); err != nil {
 		s.opt.Logger.Warn("agent: save note", "err", err)
 	}
@@ -138,4 +139,49 @@ func appendTurn(h []contract.Turn, t contract.Turn) []contract.Turn {
 	}
 	last.Results = append(last.Results, t.Results...)
 	return h
+}
+
+// displayMessages is how many stored messages History reads.
+const displayMessages = 200
+
+// History rebuilds the chat that the web app showed: the user's text,
+// the assistant's text, and the approval cards. System notes, photo
+// notes, and tool results other than cards stay hidden.
+func (s *Service) History(ctx context.Context,
+	sessionID string) ([]domain.ChatItem, error) {
+	msgs, err := s.store.RecentMessages(ctx, sessionID, displayMessages)
+	if err != nil {
+		return nil, err
+	}
+	out := []domain.ChatItem{}
+	for _, m := range msgs {
+		switch m.Role {
+		case "user":
+			if strings.HasPrefix(m.Content, systemNotePrefix) {
+				continue
+			}
+			text := m.Content
+			if i := strings.Index(text, photoNotePrefix); i >= 0 {
+				text = text[:i]
+			}
+			out = append(out, domain.ChatItem{Role: "user",
+				Text: strings.TrimSpace(text), Photo: m.ImageRef != ""})
+		case "model":
+			var sm storedModel
+			if json.Unmarshal([]byte(m.Content), &sm) == nil && sm.Text != "" {
+				out = append(out, domain.ChatItem{Role: "assistant", Text: sm.Text})
+			}
+		case "tool":
+			var st storedTool
+			if json.Unmarshal([]byte(m.Content), &st) != nil {
+				continue
+			}
+			for _, r := range st.Results {
+				if id, ok := r.Output["action_id"].(string); ok && id != "" {
+					out = append(out, domain.ChatItem{Role: "card", ActionID: id})
+				}
+			}
+		}
+	}
+	return out, nil
 }

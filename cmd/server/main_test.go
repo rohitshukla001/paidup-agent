@@ -95,3 +95,15 @@ func TestRenderNeedsEverySetting(t *testing.T) {
 		t.Errorf("error names a setting that is present: %v", err)
 	}
 }
+
+func TestRenderNeedsALongDemoPassword(t *testing.T) {
+	env := map[string]string{"PORT": "0", "RENDER": "true",
+		"PAYPAL_CLIENT_ID": "id", "PAYPAL_CLIENT_SECRET": "secret",
+		"GEMINI_API_KEY": "key", "GEMINI_MODEL_PRIMARY": "model",
+		"DATABASE_URL": "postgres://unused", "SESSION_SECRET": "s",
+		"DEMO_PASSWORD": "short"}
+	_, err := wire(context.Background(), func(k string) string { return env[k] }, true)
+	if err == nil || !strings.Contains(err.Error(), "DEMO_PASSWORD must have") {
+		t.Fatalf("err = %v", err)
+	}
+}

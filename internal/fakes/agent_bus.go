@@ -30,6 +30,10 @@ func (Agent) Approve(_ context.Context, _ string, actionID string, emit func(dom
 
 func (Agent) Reject(context.Context, string, string) error { return nil }
 
+func (Agent) History(context.Context, string) ([]domain.ChatItem, error) {
+	return []domain.ChatItem{}, nil
+}
+
 // Bus is an in-memory fan-out of events. A slow subscriber loses events
 // instead of blocking the publisher.
 type Bus struct {

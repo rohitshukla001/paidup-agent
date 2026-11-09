@@ -79,6 +79,7 @@ func New(cfg Config, a contract.Agent, s contract.Store, p contract.PayPal,
 	auth := srv.requireSession
 	mux.Handle("GET /api/session", auth(srv.session))
 	mux.Handle("POST /api/chat", auth(srv.chat))
+	mux.Handle("GET /api/messages", auth(srv.messages))
 	mux.Handle("POST /api/actions/{id}/approve", auth(srv.approve))
 	mux.Handle("POST /api/actions/{id}/reject", auth(srv.reject))
 	mux.Handle("GET /api/actions", auth(srv.listActions))

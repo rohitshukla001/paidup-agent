@@ -89,6 +89,15 @@ func (a PendingAction) Expired(now time.Time) bool { return !now.Before(a.Expire
 // step is "create", "send", "remind", or "cancel".
 func (a PendingAction) IdempotencyKey(step string) string { return a.RequestID + "-" + step }
 
+// ChatItem is one line of the chat as the web app shows it. Role is
+// "user", "assistant", or "card". A card line names its action.
+type ChatItem struct {
+	Role     string `json:"role"`
+	Text     string `json:"text,omitempty"`
+	Photo    bool   `json:"photo,omitempty"`
+	ActionID string `json:"action_id,omitempty"`
+}
+
 // Message is one turn of chat history.
 type Message struct {
 	ID        string `json:"id"`

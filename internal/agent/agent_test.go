@@ -551,3 +551,90 @@ func TestLoadHistoryStartsAtUserMessage(t *testing.T) {
 		t.Fatalf("history = %+v, err = %v", h, err)
 	}
 }
+
+// cancelOnCreate cancels the request right after CreateDraft, as a
+// closed browser tab would. Send fails if it sees that cancellation.
+type cancelOnCreate struct {
+	*fakes.PayPal
+	cancel context.CancelFunc
+}
+
+func (p cancelOnCreate) CreateDraft(ctx context.Context, d domain.InvoiceDraft,
+	requestID string) (domain.Invoice, error) {
+	inv, err := p.PayPal.CreateDraft(ctx, d, requestID)
+	p.cancel()
+	return inv, err
+}
+
+func (p cancelOnCreate) Send(ctx context.Context, id, requestID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return p.PayPal.Send(ctx, id, requestID)
+}
+
+func TestApproveFinishesAfterTheRequestEnds(t *testing.T) {
+	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
+	e.send(t, "bill jane")
+	a := e.proposed(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pp := cancelOnCreate{PayPal: e.pp, cancel: cancel}
+	agent := NewService(e.llm, pp, e.store, Options{
+		Now:    func() time.Time { return e.now },
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	_ = agent.Approve(ctx, "s1", a.ID, func(domain.Event) {})
+
+	got, _ := e.store.GetAction(context.Background(), a.ID)
+	if got.Status != domain.ActionDone {
+		t.Fatalf("action status = %s, want DONE", got.Status)
+	}
+	if sent, _ := e.store.ListInvoices(context.Background(), "SENT"); len(sent) != 1 {
+		t.Fatalf("sent invoices = %d, want 1", len(sent))
+	}
+}
+
+func TestEmptyModelReplyGetsAMessage(t *testing.T) {
+	e := newEnv(t, contract.ChatResponse{})
+	e.send(t, "hello")
+	deltas := e.ofType(domain.EventMessageDelta)
+	if len(deltas) != 1 || !strings.Contains(string(deltas[0].Data), emptyReply) {
+		t.Fatalf("deltas = %v", deltas)
+	}
+}
+
+func TestHistoryForDisplay(t *testing.T) {
+	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs),
+		contract.ChatResponse{Text: "Card ready."})
+	e.llm.ExtractFunc = func(context.Context, string, []byte, string) (domain.InvoiceDraft, error) {
+		return fakes.SampleDraft(), nil
+	}
+	if err := e.agent.HandleMessage(context.Background(), "s1", "bill this",
+		[]byte("png"), "image/png", e.emit); err != nil {
+		t.Fatal(err)
+	}
+	a := e.proposed(t)
+	_ = e.agent.Approve(context.Background(), "s1", a.ID, e.emit)
+
+	items, err := e.agent.History(context.Background(), "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []domain.ChatItem{
+		{Role: "user", Text: "bill this", Photo: true},
+		{Role: "card", ActionID: a.ID},
+		{Role: "assistant", Text: "Card ready."},
+	}
+	if len(items) != len(want) {
+		t.Fatalf("items = %+v", items)
+	}
+	for i := range want {
+		if items[i] != want[i] {
+			t.Fatalf("item %d = %+v, want %+v", i, items[i], want[i])
+		}
+	}
+	if other, _ := e.agent.History(context.Background(), "s2"); len(other) != 0 {
+		t.Fatalf("another session sees %+v", other)
+	}
+}

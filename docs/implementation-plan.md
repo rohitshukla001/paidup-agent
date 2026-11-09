@@ -27,17 +27,13 @@ Two parts of the plan need the other tasks to be complete:
 
 Before you start a task, read Sections 1 to 4. Then read the task card.
 
-## 2. Independence from Vendasta
+## 2. Accounts and secrets
 
-This project is personal. It has no connection to Vendasta. Obey these rules in each task:
+Obey these rules in each task:
 
 - Use personal accounts only: GitHub, Google, PayPal Developer, Render, Devpost, and YouTube.
-- Use a personal email address for each account. Do not use a vendasta.com address.
-- Do not copy code, protos, templates, or libraries from Vendasta repositories, such as `galaxy` or `vendastaapis`.
-- Do not use Vendasta CI, cloud projects, secrets, AI tools, or internal systems.
-- Use a personal computer if possible.
-- Do the work outside work hours.
-- Do not build features for reviews or reputation management.
+- Keep every key and password in environment variables. Do not commit `.env`.
+- Put the demo password and the sandbox buyer login in Devpost only.
 
 ## 3. Product and architecture
 
@@ -135,6 +131,14 @@ type Message struct {
     CreatedAt time.Time `json:"created_at"`
 }
 
+// ChatItem is one line of the chat as the web app shows it.
+type ChatItem struct {
+    Role     string `json:"role"` // user, assistant, card
+    Text     string `json:"text,omitempty"`
+    Photo    bool   `json:"photo,omitempty"`
+    ActionID string `json:"action_id,omitempty"` // for a card
+}
+
 type Event struct {
     Type string          `json:"type"`
     Data json.RawMessage `json:"data"`
@@ -215,6 +219,7 @@ type Agent interface {
     HandleMessage(ctx context.Context, sessionID, text string, image []byte, mimeType string, emit func(domain.Event)) error
     Approve(ctx context.Context, sessionID, actionID string, emit func(domain.Event)) error
     Reject(ctx context.Context, sessionID, actionID string) error
+    History(ctx context.Context, sessionID string) ([]domain.ChatItem, error) // chat for display, oldest first
 }
 
 type Bus interface {
@@ -286,6 +291,7 @@ Error codes: `rate_limited`, `busy`, `validation`, `expired`, `not_found`, `unau
 | `POST /api/login` | `{"password": "..."}` | 204 and a signed session cookie |
 | `GET /api/session` | None | 204 if the session cookie is valid, 401 if not |
 | `POST /api/chat` | Multipart: field `text`, optional field `image` | SSE stream |
+| `GET /api/messages` | None | `[ChatItem]`: the session's chat, so a reload can show it again |
 | `POST /api/actions/{id}/approve` | None | SSE stream |
 | `POST /api/actions/{id}/reject` | None | 204 |
 | `GET /api/actions?status=PENDING` | None | `[PendingAction]` |

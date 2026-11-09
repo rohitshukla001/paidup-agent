@@ -72,6 +72,16 @@ func (s *server) chat(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// messages returns the session's chat, so a page reload can show it again.
+func (s *server) messages(w http.ResponseWriter, r *http.Request) {
+	items, err := s.agent.History(r.Context(), sessionID(r.Context()))
+	if err != nil {
+		s.writeStoreError(w, "history", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
 // approve runs the approval and streams the result as SSE.
 func (s *server) approve(w http.ResponseWriter, r *http.Request) {
 	sse, ok := startSSE(w)

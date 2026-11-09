@@ -162,3 +162,17 @@ func TestFakeLLMEcho(t *testing.T) {
 		t.Fatalf("SampleDraft is not valid: %v", err)
 	}
 }
+
+func TestStoreInvoiceOrderIsNumeric(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore()
+	for _, n := range []string{"9", "10", "2"} {
+		_ = s.UpsertInvoice(ctx, domain.Invoice{ID: "INV-" + n, Number: n,
+			Status: "SENT", UpdatedAt: time.Now()})
+	}
+	got, _ := s.ListInvoices(ctx, "")
+	if len(got) != 3 || got[0].Number != "10" || got[1].Number != "9" ||
+		got[2].Number != "2" {
+		t.Fatalf("order = %v", got)
+	}
+}

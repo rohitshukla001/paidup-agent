@@ -310,12 +310,14 @@ func (s *Store) UpsertInvoice(ctx context.Context, inv domain.Invoice) error {
 	return wrap("upsert invoice", err)
 }
 
+// ListInvoices returns the newest invoice number first. Sorting by length
+// first puts "10" after "9" when PayPal does not pad the numbers.
 func (s *Store) ListInvoices(ctx context.Context, status string) ([]domain.Invoice, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, number, status,
 		client_name, client_email, currency, total, due_date,
 		payer_view_url, updated_at FROM invoice_cache
 		WHERE $1 = '' OR status = $1
-		ORDER BY number DESC, id DESC`, status)
+		ORDER BY length(number) DESC, number DESC, id DESC`, status)
 	if err != nil {
 		return nil, wrap("list invoices", err)
 	}

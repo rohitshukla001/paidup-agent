@@ -43,6 +43,16 @@ export interface PendingAction {
   preview: Preview;
   status: ActionStatus;
   expires_at: string;
+  // Set when the action is DONE (invoice) or FAILED (error).
+  result?: { invoice?: Invoice; error?: string };
+}
+
+// One line of a saved chat, from GET /api/messages.
+export interface ChatItem {
+  role: 'user' | 'assistant' | 'card';
+  text?: string;
+  photo?: boolean;
+  action_id?: string;
 }
 
 export interface Summary {

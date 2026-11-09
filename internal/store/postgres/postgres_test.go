@@ -234,6 +234,20 @@ func TestInvoiceCache(t *testing.T) {
 	}
 }
 
+func TestInvoiceOrderIsNumeric(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	for _, n := range []string{"9", "10", "2"} {
+		_ = s.UpsertInvoice(ctx, domain.Invoice{ID: "INV-" + n, Number: n,
+			Status: "SENT", UpdatedAt: time.Now()})
+	}
+	got, _ := s.ListInvoices(ctx, "")
+	if len(got) != 3 || got[0].Number != "10" || got[1].Number != "9" ||
+		got[2].Number != "2" {
+		t.Fatalf("order = %v", got)
+	}
+}
+
 func TestEventsRemindersReset(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()

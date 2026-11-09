@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"paidup-agent/internal/contract"
 	"paidup-agent/internal/domain"
 )
+
+// executeTimeout bounds the PayPal calls of one approval.
+const executeTimeout = 90 * time.Second
 
 // getOwnAction returns the action if this session may act on it. An
 // action with an empty SessionID came from the reminder job, and any
@@ -61,12 +65,17 @@ func (s *Service) Approve(ctx context.Context, sessionID, actionID string,
 		return ctx.Err()
 	}
 
-	inv, note, err := s.execute(ctx, a)
+	// The approval is final, so finish the PayPal calls even if the browser
+	// closes the request. Otherwise a create could succeed without a send.
+	run, cancel := context.WithTimeout(context.WithoutCancel(ctx), executeTimeout)
+	defer cancel()
+
+	inv, note, err := s.execute(run, a)
 	if err != nil {
 		s.opt.Logger.Error("agent: execute action", "tool", a.Tool, "err", err)
-		res, _ := json.Marshal(map[string]string{"error": err.Error()})
-		_ = s.store.SetActionResult(ctx, a.ID, domain.ActionFailed, res)
-		s.addNote(ctx, sessionID, "the user approved "+a.Tool+
+		res, _ := json.Marshal(map[string]string{"error": userError(err)})
+		_ = s.store.SetActionResult(run, a.ID, domain.ActionFailed, res)
+		s.addNote(run, sessionID, "the user approved "+a.Tool+
 			" but PayPal returned an error: "+userError(err))
 		s.emitError(emit, domain.CodePayPalError,
 			"PayPal could not complete this. "+userError(err))
@@ -74,11 +83,11 @@ func (s *Service) Approve(ctx context.Context, sessionID, actionID string,
 	}
 
 	res, _ := json.Marshal(map[string]any{"invoice": inv})
-	if err := s.store.SetActionResult(ctx, a.ID, domain.ActionDone, res); err != nil {
+	if err := s.store.SetActionResult(run, a.ID, domain.ActionDone, res); err != nil {
 		s.opt.Logger.Warn("agent: save result", "err", err)
 	}
-	s.cache(ctx, inv)
-	s.addNote(ctx, sessionID, note)
+	s.cache(run, inv)
+	s.addNote(run, sessionID, note)
 	emitData(emit, domain.EventActionResult, map[string]any{
 		"action_id": a.ID, "status": domain.ActionDone, "invoice": inv,
 	})

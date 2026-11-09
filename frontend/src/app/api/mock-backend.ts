@@ -3,6 +3,7 @@ import { Observable, Subject } from 'rxjs';
 import { Backend } from './backend';
 import {
   ApiError,
+  ChatItem,
   Invoice,
   InvoiceDraft,
   PendingAction,
@@ -208,6 +209,11 @@ export class MockBackend extends Backend {
       this.invoices$.set(id, paid);
       this.live.next({ type: 'invoice.updated', data: paid });
     }, 4000);
+  }
+
+  // The mock keeps its data in memory, so a reload starts a new chat.
+  async history(): Promise<ChatItem[]> {
+    return [];
   }
 
   async reject(actionId: string): Promise<void> {

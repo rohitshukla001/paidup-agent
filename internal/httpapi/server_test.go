@@ -62,6 +62,11 @@ func (a *stubAgent) Reject(context.Context, string, string) error {
 	return a.rejectErr
 }
 
+func (a *stubAgent) History(_ context.Context, sid string) ([]domain.ChatItem, error) {
+	return []domain.ChatItem{{Role: "user", Text: "hi " + sid},
+		{Role: "card", ActionID: "a1"}}, nil
+}
+
 func (a *stubAgent) setRejectErr(err error) {
 	a.mu.Lock()
 	a.rejectErr = err
@@ -496,4 +501,23 @@ func TestStaticFiles(t *testing.T) {
 func readAll(r *http.Response) string {
 	b, _ := io.ReadAll(r.Body)
 	return string(b)
+}
+
+func TestMessagesReturnsThisSessionsChat(t *testing.T) {
+	e := newTestEnv(t)
+	if r := e.do(t, "GET", "/api/messages", "", nil, ""); r.StatusCode != 401 {
+		t.Fatalf("no cookie: %d", r.StatusCode)
+	}
+	cookie := e.login(t)
+	r := e.do(t, "GET", "/api/messages", cookie, nil, "")
+	var items []domain.ChatItem
+	if err := json.NewDecoder(r.Body).Decode(&items); err != nil || r.StatusCode != 200 {
+		t.Fatalf("status %d, err %v", r.StatusCode, err)
+	}
+	// The stub echoes the session ID, so a non-empty ID proves the cookie
+	// reached the agent.
+	if len(items) != 2 || len(items[0].Text) <= len("hi ") ||
+		items[1].ActionID != "a1" {
+		t.Fatalf("items = %+v", items)
+	}
 }

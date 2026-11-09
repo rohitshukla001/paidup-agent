@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Invoice, PendingAction, Period, ServerEvent, Summary } from './models';
+import { ChatItem, Invoice, PendingAction, Period, ServerEvent, Summary } from './models';
 
 // Backend is the API the app uses. HttpBackend talks to the Go server;
 // MockBackend runs in the browser with fake data.
@@ -8,6 +8,8 @@ export abstract class Backend {
   abstract login(password: string): Promise<void>;
   abstract chat(text: string, image?: File): Observable<ServerEvent>;
   abstract approve(actionId: string): Observable<ServerEvent>;
+  // The session's saved chat, oldest first.
+  abstract history(): Promise<ChatItem[]>;
   abstract reject(actionId: string): Promise<void>;
   abstract actions(status: 'PENDING' | ''): Promise<PendingAction[]>;
   abstract invoices(): Promise<Invoice[]>;

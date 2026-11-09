@@ -177,7 +177,14 @@ func (s *Store) ListInvoices(_ context.Context, status string) ([]domain.Invoice
 			out = append(out, inv)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Number > out[j].Number })
+	// Same order as the Postgres store: by length, then by text.
+	sort.Slice(out, func(i, j int) bool {
+		a, b := out[i].Number, out[j].Number
+		if len(a) != len(b) {
+			return len(a) > len(b)
+		}
+		return a > b
+	})
 	return out, nil
 }
 

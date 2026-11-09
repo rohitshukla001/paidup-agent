@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { Backend } from './backend';
 import {
   ApiError,
+  ChatItem,
   ErrorData,
   Invoice,
   PendingAction,
@@ -78,6 +79,10 @@ export class HttpBackend extends Backend {
 
   approve(actionId: string): Observable<ServerEvent> {
     return this.stream(`/api/actions/${encodeURIComponent(actionId)}/approve`);
+  }
+
+  history(): Promise<ChatItem[]> {
+    return this.json('/api/messages');
   }
 
   async reject(actionId: string): Promise<void> {

@@ -41,6 +41,9 @@ func main() {
 	}
 }
 
+// minDemoPassword is the shortest DEMO_PASSWORD that Render accepts.
+const minDemoPassword = 12
+
 // deps holds every dependency that main wires together.
 type deps struct {
 	LLM    contract.LLM
@@ -55,6 +58,14 @@ type deps struct {
 // setting into an error instead of a fake.
 func wire(ctx context.Context, getenv func(string) string, strict bool) (deps, error) {
 	var d deps
+	// The demo password is shared with the judges and has no lockout, so
+	// on Render it must be long enough that guessing it is not practical.
+	// An empty one is reported with the other missing settings.
+	if pw := getenv("DEMO_PASSWORD"); strict && pw != "" &&
+		len(pw) < minDemoPassword {
+		return d, fmt.Errorf("DEMO_PASSWORD must have at least %d characters",
+			minDemoPassword)
+	}
 	var missing []string
 	need := func(part string, vars ...string) bool {
 		var absent []string
