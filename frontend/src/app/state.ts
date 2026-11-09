@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { Backend } from './api/backend';
+import { money } from './money';
 import {
   ApiError,
   Invoice,
@@ -23,9 +24,11 @@ export interface Card {
 
 export interface ChatMessage {
   id: number;
-  role: 'user' | 'assistant' | 'error' | 'card';
+  role: 'user' | 'assistant' | 'tool' | 'error' | 'card';
   text?: string;
   imageName?: string;
+  // imageUrl previews a photo sent in this page; a reloaded chat has none.
+  imageUrl?: string;
   cardId?: string;
 }
 
@@ -89,7 +92,7 @@ export class AppState {
       } else if (item.role === 'user') {
         this.push({ role: 'user', text: item.text, imageName: item.photo ? 'attached' : undefined });
       } else {
-        this.push({ role: 'assistant', text: item.text });
+        this.push({ role: item.role, text: item.text });
       }
     }
   }
@@ -121,7 +124,12 @@ export class AppState {
     if (this.sending()) {
       return;
     }
-    this.push({ role: 'user', text, imageName: image?.name });
+    this.push({
+      role: 'user',
+      text,
+      imageName: image?.name,
+      imageUrl: image ? URL.createObjectURL(image) : undefined,
+    });
     this.sending.set(true);
     this.consume(this.api.chat(text, image), (e) => this.onChatEvent(e), () =>
       this.sending.set(false),
@@ -199,6 +207,9 @@ export class AppState {
     switch (e.type) {
       case 'message.delta':
         this.push({ role: 'assistant', text: e.data.text });
+        break;
+      case 'tool.used':
+        this.push({ role: 'tool', text: e.data.text });
         break;
       case 'action.proposed':
         this.upsertCard(e.data);
@@ -309,7 +320,7 @@ export function describe(a: PendingAction): string {
   const p = a.preview;
   switch (p.kind) {
     case 'invoice':
-      return `invoice to ${p.draft.client_name} for ${p.total} ${p.draft.currency}`;
+      return `invoice to ${p.draft.client_name} for ${money(p.total, p.draft.currency)}`;
     case 'reminder':
       return `reminder for invoice ${p.invoice.number}`;
     case 'cancel':

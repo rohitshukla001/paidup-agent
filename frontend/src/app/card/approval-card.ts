@@ -1,9 +1,11 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { MoneyPipe, money } from '../money';
 import { AppState, Card } from '../state';
 
 // ApprovalCard shows one proposed PayPal action with Approve and Reject.
 @Component({
   selector: 'app-approval-card',
+  imports: [MoneyPipe],
   template: `
     @let c = card();
     @let p = c.action.preview;
@@ -27,11 +29,11 @@ import { AppState, Card } from '../state';
             </thead>
             <tbody>
               @for (it of p.draft.items; track $index) {
-                <tr><td>{{ it.name }}</td><td>{{ it.quantity }}</td><td>{{ it.unit_price }}</td></tr>
+                <tr><td>{{ it.name }}</td><td>{{ it.quantity }}</td><td>{{ it.unit_price | money: p.draft.currency }}</td></tr>
               }
             </tbody>
             <tfoot>
-              <tr><th scope="row" colspan="2">Total</th><td>{{ p.total }} {{ p.draft.currency }}</td></tr>
+              <tr><th scope="row" colspan="2">Total</th><td>{{ p.total | money: p.draft.currency }}</td></tr>
             </tfoot>
           </table>
           @if (p.draft.note) {
@@ -41,7 +43,7 @@ import { AppState, Card } from '../state';
         @case ('reminder') {
           <dl class="facts">
             <dt>Invoice</dt>
-            <dd>{{ p.invoice.number }}, {{ p.invoice.total }} {{ p.invoice.currency }}</dd>
+            <dd>{{ p.invoice.number }}, {{ p.invoice.total | money: p.invoice.currency }}</dd>
             <dt>To</dt>
             <dd>{{ p.invoice.client_email }}</dd>
             <dt>Subject</dt>
@@ -52,7 +54,7 @@ import { AppState, Card } from '../state';
         @case ('cancel') {
           <dl class="facts">
             <dt>Invoice</dt>
-            <dd>{{ p.invoice.number }}, {{ p.invoice.total }} {{ p.invoice.currency }}</dd>
+            <dd>{{ p.invoice.number }}, {{ p.invoice.total | money: p.invoice.currency }}</dd>
             <dt>Reason</dt>
             <dd>{{ p.reason }}</dd>
           </dl>
@@ -90,7 +92,7 @@ export class ApprovalCard {
     const p = this.card().action.preview;
     switch (p.kind) {
       case 'invoice':
-        return `Send invoice: ${p.total} ${p.draft.currency}`;
+        return `Send invoice: ${money(p.total, p.draft.currency)}`;
       case 'reminder':
         return `Send reminder: invoice ${p.invoice.number}`;
       case 'cancel':

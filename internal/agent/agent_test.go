@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -623,6 +624,7 @@ func TestHistoryForDisplay(t *testing.T) {
 	}
 	want := []domain.ChatItem{
 		{Role: "user", Text: "bill this", Photo: true},
+		{Role: "tool", Text: photoSummary},
 		{Role: "card", ActionID: a.ID},
 		{Role: "assistant", Text: "Card ready."},
 	}
@@ -636,5 +638,49 @@ func TestHistoryForDisplay(t *testing.T) {
 	}
 	if other, _ := e.agent.History(context.Background(), "s2"); len(other) != 0 {
 		t.Fatalf("another session sees %+v", other)
+	}
+}
+
+func TestToolLinesShowWhatTheAgentDid(t *testing.T) {
+	e := newEnv(t, call(toolListInvoices, map[string]any{}),
+		contract.ChatResponse{Text: "Nobody owes you money."})
+	ctx := context.Background()
+	for i := range 3 {
+		inv, _ := e.pp.CreateDraft(ctx, fakes.SampleDraft(), fmt.Sprint("r", i))
+		_ = e.pp.Send(ctx, inv.ID, fmt.Sprint("s", i))
+	}
+	e.send(t, "Who owes me money?")
+
+	lines := e.ofType(domain.EventToolUsed)
+	if len(lines) != 1 || !strings.Contains(string(lines[0].Data),
+		"Read 3 invoices from PayPal") {
+		t.Fatalf("tool lines = %v", lines)
+	}
+	items, _ := e.agent.History(ctx, "s1")
+	if len(items) != 3 || items[1].Role != "tool" ||
+		items[1].Text != "Read 3 invoices from PayPal" {
+		t.Fatalf("history = %+v", items)
+	}
+}
+
+func TestToolSummary(t *testing.T) {
+	tests := []struct {
+		name string
+		out  map[string]any
+		want string
+	}{
+		{toolListInvoices, map[string]any{"invoices": []any{1}}, "Read 1 invoice from PayPal"},
+		{toolSearchInvoices, map[string]any{"invoices": []map[string]any{}},
+			"Searched PayPal and found 0 invoices"},
+		{toolGetInvoice, map[string]any{"invoice": map[string]any{"number": "0007"}},
+			"Read invoice 0007 from PayPal"},
+		{toolCashSummary, map[string]any{}, "Added up paid, unpaid, and overdue money from PayPal"},
+		{toolListInvoices, map[string]any{"error": "x"}, ""},
+		{domain.ToolProposeInvoice, map[string]any{"action_id": "a"}, ""},
+	}
+	for _, tt := range tests {
+		if got := toolSummary(tt.name, tt.out); got != tt.want {
+			t.Errorf("%s: got %q, want %q", tt.name, got, tt.want)
+		}
 	}
 }

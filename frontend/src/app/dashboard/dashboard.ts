@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { Invoice } from '../api/models';
 import { ApprovalCard } from '../card/approval-card';
 import { PeriodMenu } from './period-menu';
+import { MoneyPipe, isZero } from '../money';
 import { AppState } from '../state';
 
 // bucket matches domain.Bucket on the server.
@@ -17,7 +18,7 @@ function bucket(inv: Invoice): string {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [ApprovalCard, DatePipe, PeriodMenu],
+  imports: [ApprovalCard, DatePipe, MoneyPipe, PeriodMenu],
   template: `
     <section class="panel dashboard" aria-labelledby="dash-title">
       <div class="dash-head">
@@ -31,9 +32,15 @@ function bucket(inv: Invoice): string {
 
       <div class="totals">
         @for (s of state.summary(); track s.currency) {
-          <div class="total paid"><span>Paid</span><strong>{{ s.paid }} {{ s.currency }}</strong></div>
-          <div class="total unpaid"><span>Unpaid</span><strong>{{ s.unpaid }} {{ s.currency }}</strong></div>
-          <div class="total overdue"><span>Overdue</span><strong>{{ s.overdue }} {{ s.currency }}</strong></div>
+          <div class="total paid" [class.zero]="isZero(s.paid)">
+            <span>Paid</span><strong>{{ s.paid | money: s.currency }}</strong>
+          </div>
+          <div class="total unpaid" [class.zero]="isZero(s.unpaid)">
+            <span>Unpaid</span><strong>{{ s.unpaid | money: s.currency }}</strong>
+          </div>
+          <div class="total overdue" [class.zero]="isZero(s.overdue)">
+            <span>Overdue</span><strong>{{ s.overdue | money: s.currency }}</strong>
+          </div>
         } @empty {
           <p class="muted">No invoices yet. Ask the assistant to bill a client.</p>
         }
@@ -65,7 +72,7 @@ function bucket(inv: Invoice): string {
                 <tr>
                   <td>{{ inv.number }}</td>
                   <td>{{ inv.client_name }}</td>
-                  <td>{{ inv.total }} {{ inv.currency }}</td>
+                  <td>{{ inv.total | money: inv.currency }}</td>
                   <td>{{ inv.due_date ? (inv.due_date | date: 'd MMM' : 'UTC') : '' }}</td>
                   <td><span class="status" [class]="'status ' + bucketOf(inv)">{{ inv.status }}</span></td>
                   <td>
@@ -99,6 +106,7 @@ export class Dashboard {
   protected readonly state = inject(AppState);
   protected readonly refreshing = signal('');
   protected readonly bucketOf = bucket;
+  protected readonly isZero = isZero;
 
   protected async refresh(id: string): Promise<void> {
     this.refreshing.set(id);

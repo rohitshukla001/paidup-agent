@@ -189,3 +189,25 @@ input::placeholder, textarea::placeholder { color: #9ca3af; opacity: 1; }
   .period-list { animation: none; }
   .period-trigger .chevron { transition: none; }
 }
+
+/* Sample photo button, photo preview, and tool lines in the chat */
+.example.sample-photo { display: inline-flex; align-items: center; gap: 0.5rem; }
+.example.sample-photo svg {
+  width: 1.15rem; height: 1.15rem; flex: none; fill: none; stroke: var(--brand);
+  stroke-width: 1.8; stroke-linejoin: round;
+}
+.bubble.user .photo {
+  display: block; max-width: min(220px, 100%); max-height: 220px; border-radius: 8px;
+  background: #fff; margin: 0.1rem 0;
+}
+.tool-line {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.82rem; color: var(--muted); padding: 0 0.3rem;
+}
+.tool-line svg {
+  width: 0.95rem; height: 0.95rem; fill: none; stroke: var(--paid);
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+/* A zero total is not a warning, so it stays neutral. */
+.total.zero strong { color: var(--muted); }
+.sample-link { font-size: 0.9rem; margin-right: auto; }

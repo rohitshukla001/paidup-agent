@@ -22,12 +22,26 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
             <button type="button" class="example" (click)="useExample(example2)">
               {{ example2 }}
             </button>
+            <button type="button" class="example sample-photo" (click)="useSamplePhoto()"
+                    [disabled]="state.sending()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+              Try a sample photo of a handwritten quote
+            </button>
           </div>
         }
         @for (m of state.messages(); track m.id) {
           @switch (m.role) {
             @case ('user') {
-              <div class="bubble user">@if (m.text) {<span>{{ m.text }}</span>}@if (m.imageName) {<span class="attachment">Photo: {{ m.imageName }}</span>}</div>
+              <div class="bubble user">@if (m.imageUrl) {<img class="photo" [src]="m.imageUrl" [alt]="'Photo: ' + m.imageName" />} @else if (m.imageName) {<span class="attachment">Photo attached</span>}@if (m.text) {<span>{{ m.text }}</span>}</div>
+            }
+            @case ('tool') {
+              <div class="tool-line">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+                {{ m.text }}
+              </div>
             }
             @case ('assistant') {
               <div class="bubble assistant">{{ m.text }}</div>
@@ -66,10 +80,12 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
           rows="2"
           [(ngModel)]="text"
           (keydown.enter)="onEnter($event)"
-          placeholder="Bill John at john@example.com 450 USD for a landing page, due in 7 days"
+          placeholder="Describe a job, or ask about your invoices"
         ></textarea>
         <div class="composer-row">
           <label class="button" for="photo">Attach photo</label>
+          <button type="button" class="link sample-link" (click)="useSamplePhoto()"
+                  [disabled]="state.sending()">Try a sample photo</button>
           <input id="photo" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp"
                  (change)="pick($event)" #file />
           <button class="primary" type="submit"
@@ -104,6 +120,25 @@ export class Chat {
 
   protected useExample(text: string): void {
     this.text = text;
+  }
+
+  // useSamplePhoto sends the sample quote that ships with the app, so a
+  // judge can try photo reading without a file of their own.
+  protected async useSamplePhoto(): Promise<void> {
+    if (this.state.sending()) {
+      return;
+    }
+    this.fileError.set('');
+    try {
+      const res = await fetch('samples/handwritten-quote.png');
+      if (!res.ok) {
+        throw new Error(String(res.status));
+      }
+      const blob = await res.blob();
+      this.state.send('', new File([blob], 'handwritten-quote.png', { type: 'image/png' }));
+    } catch {
+      this.fileError.set('The sample photo could not load. Try again.');
+    }
   }
 
   protected onEnter(e: Event): void {

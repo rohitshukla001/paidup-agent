@@ -49,7 +49,7 @@ export interface PendingAction {
 
 // One line of a saved chat, from GET /api/messages.
 export interface ChatItem {
-  role: 'user' | 'assistant' | 'card';
+  role: 'user' | 'assistant' | 'tool' | 'card';
   text?: string;
   photo?: boolean;
   action_id?: string;
@@ -73,6 +73,7 @@ export type ServerEvent =
   | { type: 'action.proposed'; data: PendingAction }
   | { type: 'action.result'; data: { action_id: string; status: ActionStatus; invoice?: Invoice } }
   | { type: 'invoice.updated'; data: Invoice }
+  | { type: 'tool.used'; data: { text: string } }
   | { type: 'error'; data: ErrorData };
 
 export type Period = 'this_month' | 'last_month' | 'last_30_days' | 'all';

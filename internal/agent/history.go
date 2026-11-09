@@ -145,8 +145,8 @@ func appendTurn(h []contract.Turn, t contract.Turn) []contract.Turn {
 const displayMessages = 200
 
 // History rebuilds the chat that the web app showed: the user's text,
-// the assistant's text, and the approval cards. System notes, photo
-// notes, and tool results other than cards stay hidden.
+// the tool lines, the assistant's text, and the approval cards. System
+// notes and the raw photo notes stay hidden.
 func (s *Service) History(ctx context.Context,
 	sessionID string) ([]domain.ChatItem, error) {
 	msgs, err := s.store.RecentMessages(ctx, sessionID, displayMessages)
@@ -166,6 +166,9 @@ func (s *Service) History(ctx context.Context,
 			}
 			out = append(out, domain.ChatItem{Role: "user",
 				Text: strings.TrimSpace(text), Photo: m.ImageRef != ""})
+			if m.ImageRef != "" {
+				out = append(out, domain.ChatItem{Role: "tool", Text: photoSummary})
+			}
 		case "model":
 			var sm storedModel
 			if json.Unmarshal([]byte(m.Content), &sm) == nil && sm.Text != "" {
@@ -179,6 +182,8 @@ func (s *Service) History(ctx context.Context,
 			for _, r := range st.Results {
 				if id, ok := r.Output["action_id"].(string); ok && id != "" {
 					out = append(out, domain.ChatItem{Role: "card", ActionID: id})
+				} else if line := toolSummary(r.Name, r.Output); line != "" {
+					out = append(out, domain.ChatItem{Role: "tool", Text: line})
 				}
 			}
 		}

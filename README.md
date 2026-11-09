@@ -10,7 +10,8 @@ You write "Bill John at john@example.com 450 USD for a landing page, due in 7 da
 
 From there, PaidUp keeps watch:
 
-- **Photos of quotes.** Attach a photo of a handwritten quote, a receipt, or a sticky note. Gemini reads the client, the items, and the prices into the same invoice card.
+- **Photos of quotes.** Attach a photo of a handwritten quote, a receipt, or a sticky note. Gemini reads the client, the items, and the prices into the same invoice card. No photo at hand? Click **Try a sample photo**.
+- **The agent at work.** A short line under the chat shows what the agent did, such as "Read 3 invoices from PayPal", so you can see that each answer comes from PayPal.
 - **Live payment status.** When the client pays, PayPal sends a webhook. The dashboard changes the invoice to PAID as soon as the webhook arrives, with no reload.
 - **Overdue reminders.** Every hour, the server looks for overdue invoices. For each one, Gemini writes a short, polite reminder, and PaidUp shows it as a card for you to approve.
 - **Questions about money.** Ask "Who owes me money?" or "What did I get paid last month?" The answer comes from your PayPal invoices, not from the model's memory.

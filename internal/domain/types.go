@@ -90,7 +90,8 @@ func (a PendingAction) Expired(now time.Time) bool { return !now.Before(a.Expire
 func (a PendingAction) IdempotencyKey(step string) string { return a.RequestID + "-" + step }
 
 // ChatItem is one line of the chat as the web app shows it. Role is
-// "user", "assistant", or "card". A card line names its action.
+// "user", "assistant", "tool", or "card". A tool line says what the
+// agent did; a card line names its action.
 type ChatItem struct {
 	Role     string `json:"role"`
 	Text     string `json:"text,omitempty"`
@@ -123,7 +124,10 @@ const (
 	EventActionProposed = "action.proposed"
 	EventActionResult   = "action.result"
 	EventInvoiceUpdated = "invoice.updated"
-	EventError          = "error"
+	// EventToolUsed carries {"text": "..."}: one line about what a tool
+	// call did, so the user can see the agent at work.
+	EventToolUsed = "tool.used"
+	EventError    = "error"
 )
 
 // Error codes sent in error events and error replies.

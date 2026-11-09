@@ -133,7 +133,7 @@ type Message struct {
 
 // ChatItem is one line of the chat as the web app shows it.
 type ChatItem struct {
-    Role     string `json:"role"` // user, assistant, card
+    Role     string `json:"role"` // user, assistant, tool, card
     Text     string `json:"text,omitempty"`
     Photo    bool   `json:"photo,omitempty"`
     ActionID string `json:"action_id,omitempty"` // for a card
@@ -282,6 +282,7 @@ data: <JSON>
 | `action.proposed` | A `PendingAction` with its `preview` |
 | `action.result` | `{"action_id": "...", "status": "DONE", "invoice": Invoice}` |
 | `invoice.updated` | An `Invoice` |
+| `tool.used` | `{"text": "..."}`. One line about what a tool call did, such as "Read 3 invoices from PayPal". |
 | `error` | `{"code": "...", "message": "..."}` |
 
 Error codes: `rate_limited`, `busy`, `validation`, `expired`, `not_found`, `unauthorized`, `paypal_error`, `internal`.

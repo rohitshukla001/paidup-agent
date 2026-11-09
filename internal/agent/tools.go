@@ -367,3 +367,47 @@ func userError(err error) string {
 		return "PayPal or the server had a problem. Try again."
 	}
 }
+
+// toolSummary returns one short line about what a tool call did, for the
+// user to see. It returns "" for a failed call, which the model explains,
+// and for a proposal, whose card speaks for itself. out may come straight
+// from a tool or back from JSON, so lists can be either slice type.
+func toolSummary(name string, out map[string]any) string {
+	if _, failed := out["error"]; failed {
+		return ""
+	}
+	count := func(v any) int {
+		switch l := v.(type) {
+		case []map[string]any:
+			return len(l)
+		case []any:
+			return len(l)
+		}
+		return 0
+	}
+	invoices := func(n int) string {
+		if n == 1 {
+			return "1 invoice"
+		}
+		return fmt.Sprintf("%d invoices", n)
+	}
+	switch name {
+	case toolListInvoices:
+		return "Read " + invoices(count(out["invoices"])) + " from PayPal"
+	case toolSearchInvoices:
+		return "Searched PayPal and found " + invoices(count(out["invoices"]))
+	case toolGetInvoice:
+		if inv, ok := out["invoice"].(map[string]any); ok {
+			if n, _ := inv["number"].(string); n != "" {
+				return "Read invoice " + n + " from PayPal"
+			}
+		}
+		return "Read an invoice from PayPal"
+	case toolCashSummary:
+		return "Added up paid, unpaid, and overdue money from PayPal"
+	}
+	return ""
+}
+
+// photoSummary is the tool line for a photo that Gemini read.
+const photoSummary = "Read the photo with Gemini"
