@@ -1,18 +1,18 @@
-# Render Blueprint: one web service and one Postgres database.
-# Paid plans are on purpose: a free web service sleeps when idle, and a
-# free database expires before judging ends on 15 Dec 2026.
+# Render Blueprint: one free web service. The database is a free Neon
+# Postgres, because a free Render database expires before judging ends on
+# 15 Dec 2026. A free web service sleeps after 15 idle minutes; the first
+# request after that wakes it in about a minute.
 services:
   - type: web
     name: paidup
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
+      # The Neon connection string, without "channel_binding=require".
       - key: DATABASE_URL
-        fromDatabase:
-          name: paidup-db
-          property: connectionString
+        sync: false
       - key: PAYPAL_BASE_URL
         value: https://api-m.sandbox.paypal.com
       - key: PAYPAL_CLIENT_ID
@@ -35,10 +35,3 @@ services:
         generateValue: true
       - key: ADMIN_TOKEN
         generateValue: true
-
-databases:
-  - name: paidup-db
-    plan: basic-256mb
-    postgresMajorVersion: "16"
-    databaseName: paidup
-    user: paidup

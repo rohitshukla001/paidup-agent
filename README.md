@@ -108,7 +108,7 @@ make run                          # http://localhost:8080
 
 To get sandbox keys, create a REST app in the PayPal Developer Dashboard. To get a Gemini key, use Google AI Studio. Put the model IDs that AI Studio lists in `GEMINI_MODEL_PRIMARY` and `GEMINI_MODEL_FALLBACK`.
 
-**Deploy.** `render.yaml` is a Render Blueprint with one web service and one Postgres database. On Render, `DEMO_PASSWORD` must have at least 12 characters, because the password is shared and has no lockout. After the first deploy, register `https://<your-app>/api/webhooks/paypal` as a webhook in the PayPal app for the `INVOICING.INVOICE.PAID`, `UPDATED`, `CANCELLED`, and `REFUNDED` events. Then set `PAYPAL_WEBHOOK_ID`.
+**Deploy.** `render.yaml` is a Render Blueprint for one free web service. Set `DATABASE_URL` to a free [Neon](https://neon.tech) Postgres database, without the `channel_binding` parameter. On Render, `DEMO_PASSWORD` must have at least 12 characters, because the password is shared and has no lockout. After the first deploy, register `https://<your-app>/api/webhooks/paypal` as a webhook in the PayPal app for the `INVOICING.INVOICE.PAID`, `UPDATED`, `CANCELLED`, and `REFUNDED` events. Then set `PAYPAL_WEBHOOK_ID`.
 
 ## Tests
 
