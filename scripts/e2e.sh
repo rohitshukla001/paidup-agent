@@ -30,7 +30,7 @@ api -o /dev/null "$BASE_URL/api/session" || fail "session cookie"
 
 step "2. Ask for the invoice"
 CHAT="$(api -N -X POST "$BASE_URL/api/chat" \
-  -F 'text=Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days.')"
+  -F 'text=Bill John at john@example.com 450 USD for a landing page, due in 7 days.')"
 echo "$CHAT" | grep -q '^event: action.proposed' || {
   echo "$CHAT"; fail "no invoice card"; }
 ACTION_ID="$(echo "$CHAT" | grep -A1 '^event: action.proposed' | field id)"

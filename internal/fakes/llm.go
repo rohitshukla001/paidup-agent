@@ -57,8 +57,8 @@ func (f *LLM) Requests() []contract.ChatRequest {
 // SampleDraft is the draft from step 2 of the demo script.
 func SampleDraft() domain.InvoiceDraft {
 	return domain.InvoiceDraft{
-		ClientName:  "Jane",
-		ClientEmail: "jane@example.com",
+		ClientName:  "John",
+		ClientEmail: "john@example.com",
 		Currency:    "USD",
 		Items:       []domain.LineItem{{Name: "Landing page", Quantity: 1, UnitPrice: "450.00"}},
 		DueDays:     7,

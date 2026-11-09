@@ -32,7 +32,7 @@ func newEnv(t *testing.T) *env {
 	clock := func() time.Time { return e.now }
 	e.store.Clock = clock
 	e.llm.ChatFunc = func(context.Context, contract.ChatRequest) (contract.ChatResponse, error) {
-		return contract.ChatResponse{Text: "Hi Jane, invoice 0001 is now overdue. Please pay soon."}, nil
+		return contract.ChatResponse{Text: "Hi John, invoice 0001 is now overdue. Please pay soon."}, nil
 	}
 	e.job = NewReminderJob(e.pp, e.store, e.llm, e.bus)
 	e.job.Now = clock

@@ -233,7 +233,7 @@ func TestChatStreamsAgentEvents(t *testing.T) {
 	sub, stop := e.bus.Subscribe()
 	defer stop()
 
-	body, ctype := multipartBody(t, "bill jane", pngBytes)
+	body, ctype := multipartBody(t, "bill john", pngBytes)
 	resp := e.do(t, "POST", "/api/chat", cookie, body, ctype)
 	if resp.StatusCode != 200 || resp.Header.Get("Content-Type") != "text/event-stream" {
 		t.Fatalf("status %d, type %q", resp.StatusCode, resp.Header.Get("Content-Type"))
@@ -244,7 +244,7 @@ func TestChatStreamsAgentEvents(t *testing.T) {
 		t.Fatalf("events = %+v", got)
 	}
 	sid, text, mime, image := e.agent.last()
-	if text != "bill jane" || mime != "image/png" ||
+	if text != "bill john" || mime != "image/png" ||
 		len(image) != len(pngBytes) || sid == "" {
 		t.Fatalf("agent got text %q mime %q", text, mime)
 	}

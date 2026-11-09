@@ -27,7 +27,7 @@ function daysFromNow(days: number): Date {
 
 // draftFrom pulls an email, an amount, and a day count out of the text.
 function draftFrom(text: string): InvoiceDraft {
-  const email = text.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0] ?? 'jane@example.com';
+  const email = text.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0] ?? 'john@example.com';
   const amount = text.match(/(\d[\d,]*(?:\.\d{1,2})?)\s*(USD|EUR|GBP|CAD|AUD)?/i);
   const days = text.match(/(\d+)\s*days?/i);
   const name = email.split('@')[0].replace(/[._]/g, ' ');

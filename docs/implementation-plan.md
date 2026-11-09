@@ -64,7 +64,7 @@ Go server on Render (it also serves the Angular build)
 Task 8, Task 9, and Task 10 use this script:
 
 1. Log in with the demo password.
-2. Type: "Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days."
+2. Type: "Bill John at john@example.com 450 USD for a landing page, due in 7 days."
 3. Approve the invoice card. The server creates the invoice and sends it.
 4. Open the invoice link on the card.
 5. Pay the invoice with the sandbox Personal account.

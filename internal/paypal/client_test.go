@@ -123,8 +123,8 @@ const invoiceJSON = `{
     }
   },
   "primary_recipients": [{"billing_info": {
-    "name": {"given_name": "Jane", "surname": "Doe"},
-    "email_address": "jane@example.com"}}],
+    "name": {"given_name": "John", "surname": "Doe"},
+    "email_address": "john@example.com"}}],
   "amount": {"currency_code": "USD", "value": "450.00"}
 }`
 
@@ -238,7 +238,7 @@ func TestCreateDraft(t *testing.T) {
 	c.cfg.InvoicerEmail = "me@example.com"
 
 	d := domain.InvoiceDraft{
-		ClientName: "Jane Doe", ClientEmail: "jane@example.com",
+		ClientName: "John Doe", ClientEmail: "john@example.com",
 		Currency: "USD", DueDays: 7, Note: "Thanks",
 		Items: []domain.LineItem{{Name: "Landing page", Quantity: 1.5,
 			UnitPrice: "300.00"}},
@@ -248,7 +248,7 @@ func TestCreateDraft(t *testing.T) {
 		t.Fatal(err)
 	}
 	if inv.ID != "INV2-AAAA-BBBB" || inv.Status != "DRAFT" ||
-		inv.Total != "450.00" || inv.ClientName != "Jane Doe" ||
+		inv.Total != "450.00" || inv.ClientName != "John Doe" ||
 		!inv.DueDate.Equal(time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("invoice = %+v", inv)
 	}
@@ -271,7 +271,7 @@ func TestCreateDraft(t *testing.T) {
 		`"items":[{"name":"Landing page","quantity":"1.5","unit_amount":` +
 		`{"currency_code":"USD","value":"300.00"},"unit_of_measure":"QUANTITY"}],` +
 		`"primary_recipients":[{"billing_info":{"email_address":` +
-		`"jane@example.com","name":{"given_name":"Jane","surname":"Doe"}}}]}`
+		`"john@example.com","name":{"given_name":"John","surname":"Doe"}}}]}`
 	got, _ := json.Marshal(body)
 	if string(got) != want {
 		t.Errorf("create body:\n got %s\nwant %s", got, want)
@@ -313,7 +313,7 @@ func TestCreateDraftRejectsInvalidDraft(t *testing.T) {
 }
 
 func sampleDraft() domain.InvoiceDraft {
-	return domain.InvoiceDraft{ClientName: "Jane", ClientEmail: "jane@example.com",
+	return domain.InvoiceDraft{ClientName: "John", ClientEmail: "john@example.com",
 		Currency: "USD", DueDays: 7,
 		Items: []domain.LineItem{{Name: "Page", Quantity: 1, UnitPrice: "450"}}}
 }
@@ -390,11 +390,11 @@ func TestListAndSearch(t *testing.T) {
 
 	from := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 11, 30, 0, 0, 0, 0, time.UTC)
-	if _, err := c.Search(ctx, "jane@example.com", from, to); err != nil {
+	if _, err := c.Search(ctx, "john@example.com", from, to); err != nil {
 		t.Fatal(err)
 	}
 	want := `{"invoice_date_range":{"end":"2026-11-30","start":"2026-11-01"},` +
-		`"recipient_email":"jane@example.com"}`
+		`"recipient_email":"john@example.com"}`
 	if got := string(f.last().Body); got != want {
 		t.Errorf("Search body = %s, want %s", got, want)
 	}
@@ -415,8 +415,8 @@ func TestToDomainFallbacks(t *testing.T) {
 
 func TestSplitName(t *testing.T) {
 	for in, want := range map[string][2]string{
-		"Jane":            {"Jane", ""},
-		"Jane Doe":        {"Jane", "Doe"},
+		"John":            {"John", ""},
+		"John Doe":        {"John", "Doe"},
 		"Mary Ann  Smith": {"Mary Ann", "Smith"},
 		"":                {"", ""},
 	} {

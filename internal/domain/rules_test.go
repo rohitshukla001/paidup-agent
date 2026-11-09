@@ -9,8 +9,8 @@ import (
 
 func validDraft() InvoiceDraft {
 	return InvoiceDraft{
-		ClientName:  "Jane",
-		ClientEmail: "jane@example.com",
+		ClientName:  "John",
+		ClientEmail: "john@example.com",
 		Currency:    "USD",
 		Items:       []LineItem{{Name: "Landing page", Quantity: 1, UnitPrice: "450.00"}},
 		DueDays:     7,
@@ -25,8 +25,8 @@ func TestValidateDraft(t *testing.T) {
 	}{
 		{"valid", func(*InvoiceDraft) {}, ""},
 		{"empty name", func(d *InvoiceDraft) { d.ClientName = " " }, "client_name"},
-		{"bad email", func(d *InvoiceDraft) { d.ClientEmail = "jane" }, "client_email"},
-		{"email with display name", func(d *InvoiceDraft) { d.ClientEmail = "Jane <jane@example.com>" }, "client_email"},
+		{"bad email", func(d *InvoiceDraft) { d.ClientEmail = "john" }, "client_email"},
+		{"email with display name", func(d *InvoiceDraft) { d.ClientEmail = "John <john@example.com>" }, "client_email"},
 		{"currency not allowed", func(d *InvoiceDraft) { d.Currency = "INR" }, "currency"},
 		{"due days zero", func(d *InvoiceDraft) { d.DueDays = 0 }, "due_days"},
 		{"due days 91", func(d *InvoiceDraft) { d.DueDays = 91 }, "due_days"},

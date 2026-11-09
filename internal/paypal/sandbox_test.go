@@ -36,10 +36,10 @@ func TestSandboxInvoiceFlow(t *testing.T) {
 
 	recipient := os.Getenv("PAYPAL_TEST_RECIPIENT")
 	if recipient == "" {
-		recipient = "jane@example.com"
+		recipient = "john@example.com"
 	}
 	d := domain.InvoiceDraft{
-		ClientName:  "Jane Doe",
+		ClientName:  "John Doe",
 		ClientEmail: recipient,
 		Currency:    "USD",
 		DueDays:     7,

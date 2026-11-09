@@ -53,7 +53,7 @@ func TestPayPalFlowAndIdempotency(t *testing.T) {
 	if len(paid) != 1 {
 		t.Fatalf("List(PAID) = %d invoices", len(paid))
 	}
-	found, _ := pp.Search(ctx, "jane@example.com", time.Time{}, time.Time{})
+	found, _ := pp.Search(ctx, "john@example.com", time.Time{}, time.Time{})
 	if len(found) != 1 {
 		t.Fatalf("Search = %d invoices", len(found))
 	}

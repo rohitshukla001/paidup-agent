@@ -198,7 +198,7 @@ func TestInvoiceCache(t *testing.T) {
 	ctx := context.Background()
 	t0 := time.Date(2026, 11, 11, 10, 0, 0, 0, time.UTC)
 	inv := domain.Invoice{ID: "INV-1", Number: "0001", Status: "SENT",
-		ClientName: "Jane", ClientEmail: "jane@example.com", Currency: "USD",
+		ClientName: "John", ClientEmail: "john@example.com", Currency: "USD",
 		Total: "450.00", DueDate: time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC),
 		PayerViewURL: "https://pay/1", UpdatedAt: t0}
 	if err := s.UpsertInvoice(ctx, inv); err != nil {

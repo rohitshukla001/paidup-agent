@@ -109,7 +109,7 @@ func TestChatRequestShape(t *testing.T) {
 	_, err := c.Chat(context.Background(), contract.ChatRequest{
 		System: "be brief",
 		History: []contract.Turn{
-			{Role: "user", Text: "bill jane", Image: img, MIMEType: "image/png"},
+			{Role: "user", Text: "bill john", Image: img, MIMEType: "image/png"},
 			{Role: "model", Text: "Checking.", Calls: []contract.FuncCall{
 				{Name: "list_invoices", Args: map[string]any{"status": "SENT"},
 					Signature: []byte("c2ln")},
@@ -144,7 +144,7 @@ func TestChatRequestShape(t *testing.T) {
 		t.Fatalf("contents = %d, want 3", len(req.Contents))
 	}
 	u := req.Contents[0]
-	if u.Role != "user" || u.Parts[0].Text != "bill jane" ||
+	if u.Role != "user" || u.Parts[0].Text != "bill john" ||
 		u.Parts[1].InlineData.MIMEType != "image/png" ||
 		u.Parts[1].InlineData.Data != base64.StdEncoding.EncodeToString(img) {
 		t.Errorf("user turn = %+v", u)
@@ -297,7 +297,7 @@ func TestLimiterWaitsForAShortGap(t *testing.T) {
 	}
 }
 
-const draftJSON = `{"client_name":"Jane","client_email":"jane@example.com",` +
+const draftJSON = `{"client_name":"John","client_email":"john@example.com",` +
 	`"currency":"usd","items":[{"name":"Landing page","quantity":1,` +
 	`"unit_price":"450.00"}],"due_days":7,"note":""}`
 
@@ -306,11 +306,11 @@ func TestExtractInvoice(t *testing.T) {
 	c := newTestClient(t, f)
 	ctx := context.Background()
 
-	d, err := c.ExtractInvoice(ctx, "Bill Jane 450 USD", []byte("img"), "image/jpeg")
+	d, err := c.ExtractInvoice(ctx, "Bill John 450 USD", []byte("img"), "image/jpeg")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.ClientEmail != "jane@example.com" || d.Currency != "USD" ||
+	if d.ClientEmail != "john@example.com" || d.Currency != "USD" ||
 		d.Items[0].UnitPrice != "450.00" || d.DueDays != 7 {
 		t.Fatalf("draft = %+v", d)
 	}
@@ -329,7 +329,7 @@ func TestExtractInvoice(t *testing.T) {
 	}
 
 	// Same input: served from the cache.
-	if _, err := c.ExtractInvoice(ctx, "Bill Jane 450 USD", []byte("img"),
+	if _, err := c.ExtractInvoice(ctx, "Bill John 450 USD", []byte("img"),
 		"image/jpeg"); err != nil || f.calls() != 1 {
 		t.Fatalf("cache miss: calls = %d, err = %v", f.calls(), err)
 	}
@@ -340,7 +340,7 @@ func TestExtractInvoiceEdgeCases(t *testing.T) {
 
 	fenced := &fakeGemini{replies: []reply{textReply("```json\n" + draftJSON + "\n```")}}
 	if d, err := newTestClient(t, fenced).ExtractInvoice(ctx, "x", nil,
-		""); err != nil || d.ClientName != "Jane" {
+		""); err != nil || d.ClientName != "John" {
 		t.Fatalf("fenced: %+v, %v", d, err)
 	}
 

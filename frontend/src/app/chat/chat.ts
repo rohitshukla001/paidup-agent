@@ -66,7 +66,7 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
           rows="2"
           [(ngModel)]="text"
           (keydown.enter)="onEnter($event)"
-          placeholder="Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days"
+          placeholder="Bill John at john@example.com 450 USD for a landing page, due in 7 days"
         ></textarea>
         <div class="composer-row">
           <label class="button" for="photo">Attach photo</label>
@@ -82,7 +82,7 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export class Chat {
   protected readonly state = inject(AppState);
   protected readonly example1 =
-    'Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days.';
+    'Bill John at john@example.com 450 USD for a landing page, due in 7 days.';
   protected readonly example2 = 'Who owes me money?';
   protected text = '';
   protected readonly image = signal<File | undefined>(undefined);

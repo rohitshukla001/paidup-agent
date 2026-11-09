@@ -113,16 +113,16 @@ func (e *env) proposed(t *testing.T) domain.PendingAction {
 	return a
 }
 
-var janeArgs = map[string]any{
-	"client_name": "Jane", "client_email": "jane@example.com", "currency": "usd",
+var johnArgs = map[string]any{
+	"client_name": "John", "client_email": "john@example.com", "currency": "usd",
 	"items":    []any{map[string]any{"name": "Landing page", "quantity": 1, "unit_price": "450.00"}},
 	"due_days": 7,
 }
 
 func TestProposeInvoiceSendsNothingUntilApproved(t *testing.T) {
-	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs),
+	e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs),
 		contract.ChatResponse{Text: "The invoice card is waiting for approval."})
-	e.send(t, "Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days.")
+	e.send(t, "Bill John at john@example.com 450 USD for a landing page, due in 7 days.")
 
 	a := e.proposed(t)
 	if a.Status != domain.ActionPending || a.SessionID != "s1" ||
@@ -162,8 +162,8 @@ func TestProposeInvoiceSendsNothingUntilApproved(t *testing.T) {
 }
 
 func TestApproveCreatesAndSendsOnce(t *testing.T) {
-	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
-	e.send(t, "bill jane")
+	e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs))
+	e.send(t, "bill john")
 	a := e.proposed(t)
 
 	// Two clicks at the same time: one set of PayPal calls.
@@ -213,7 +213,7 @@ func TestApproveRules(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("expired", func(t *testing.T) {
-		e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
+		e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs))
 		e.send(t, "x")
 		a := e.proposed(t)
 		e.now = e.now.Add(16 * time.Minute)
@@ -229,7 +229,7 @@ func TestApproveRules(t *testing.T) {
 	})
 
 	t.Run("other session", func(t *testing.T) {
-		e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
+		e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs))
 		e.send(t, "x")
 		a := e.proposed(t)
 		_ = e.agent.Approve(ctx, "intruder", a.ID, e.emit)
@@ -244,7 +244,7 @@ func TestApproveRules(t *testing.T) {
 	})
 
 	t.Run("reject", func(t *testing.T) {
-		e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
+		e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs))
 		e.send(t, "x")
 		a := e.proposed(t)
 		if err := e.agent.Reject(ctx, "s1", a.ID); err != nil {
@@ -312,13 +312,13 @@ func sentInvoice(t *testing.T, e *env) domain.Invoice {
 
 func TestInvalidDraftGoesBackToModel(t *testing.T) {
 	bad := map[string]any{}
-	for k, v := range janeArgs {
+	for k, v := range johnArgs {
 		bad[k] = v
 	}
 	bad["client_email"] = ""
 	e := newEnv(t, call(domain.ToolProposeInvoice, bad),
-		contract.ChatResponse{Text: "What is Jane's email address?"})
-	e.send(t, "bill jane 450")
+		contract.ChatResponse{Text: "What is John's email address?"})
+	e.send(t, "bill john 450")
 
 	if len(e.ofType(domain.EventActionProposed)) != 0 {
 		t.Fatal("invalid draft made a card")
@@ -337,7 +337,7 @@ func TestPromptInjectionCannotWriteWithoutApproval(t *testing.T) {
 	writes := e.pp.WriteCalls()
 
 	attacker := map[string]any{}
-	for k, v := range janeArgs {
+	for k, v := range johnArgs {
 		attacker[k] = v
 	}
 	attacker["client_email"] = "attacker@example.com"
@@ -390,10 +390,10 @@ func TestReadTools(t *testing.T) {
 		{Calls: []contract.FuncCall{
 			{Name: toolListInvoices, Args: map[string]any{"status": "sent"}},
 			{Name: toolGetInvoice, Args: map[string]any{"invoice_id": inv.ID}},
-			{Name: toolSearchInvoices, Args: map[string]any{"client_email": "jane@example.com"}},
+			{Name: toolSearchInvoices, Args: map[string]any{"client_email": "john@example.com"}},
 			{Name: toolCashSummary, Args: map[string]any{"period": "all"}},
 			{Name: toolSearchInvoices, Args: map[string]any{
-				"client_email": "jane@example.com", "from_date": "11/01/2026"}},
+				"client_email": "john@example.com", "from_date": "11/01/2026"}},
 		}},
 	}
 	e.send(t, "Who owes me money?")
@@ -431,7 +431,7 @@ func TestReminderRules(t *testing.T) {
 	}
 	e.script.steps = []contract.ChatResponse{
 		reminder(inv.ID), reminder(inv.ID), reminder(draft.ID)}
-	e.send(t, "remind jane")
+	e.send(t, "remind john")
 
 	if n := len(e.ofType(domain.EventActionProposed)); n != 1 {
 		t.Fatalf("cards = %d, want 1", n)
@@ -500,7 +500,7 @@ func TestImageIsReadWithStructuredOutput(t *testing.T) {
 	}
 	user := e.script.reqs[0].History[0]
 	if !strings.Contains(user.Text, "invoice this") ||
-		!strings.Contains(user.Text, `"client_email":"jane@example.com"`) {
+		!strings.Contains(user.Text, `"client_email":"john@example.com"`) {
 		t.Fatalf("user turn = %q", user.Text)
 	}
 	msgs, _ := e.store.RecentMessages(context.Background(), "s1", 10)
@@ -514,9 +514,9 @@ func TestImageIsReadWithStructuredOutput(t *testing.T) {
 }
 
 func TestHistoryReloadsAndAlternates(t *testing.T) {
-	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs),
+	e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs),
 		contract.ChatResponse{Text: "Card ready."})
-	e.send(t, "bill jane")
+	e.send(t, "bill john")
 	a := e.proposed(t)
 	_ = e.agent.Approve(context.Background(), "s1", a.ID, e.emit)
 	e.send(t, "thanks")
@@ -574,8 +574,8 @@ func (p cancelOnCreate) Send(ctx context.Context, id, requestID string) error {
 }
 
 func TestApproveFinishesAfterTheRequestEnds(t *testing.T) {
-	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs))
-	e.send(t, "bill jane")
+	e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs))
+	e.send(t, "bill john")
 	a := e.proposed(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -605,7 +605,7 @@ func TestEmptyModelReplyGetsAMessage(t *testing.T) {
 }
 
 func TestHistoryForDisplay(t *testing.T) {
-	e := newEnv(t, call(domain.ToolProposeInvoice, janeArgs),
+	e := newEnv(t, call(domain.ToolProposeInvoice, johnArgs),
 		contract.ChatResponse{Text: "Card ready."})
 	e.llm.ExtractFunc = func(context.Context, string, []byte, string) (domain.InvoiceDraft, error) {
 		return fakes.SampleDraft(), nil

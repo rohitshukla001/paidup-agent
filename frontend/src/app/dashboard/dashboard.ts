@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Invoice, Period } from '../api/models';
+import { Invoice } from '../api/models';
 import { ApprovalCard } from '../card/approval-card';
+import { PeriodMenu } from './period-menu';
 import { AppState } from '../state';
 
 // bucket matches domain.Bucket on the server.
@@ -16,20 +17,12 @@ function bucket(inv: Invoice): string {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [ApprovalCard, DatePipe],
+  imports: [ApprovalCard, DatePipe, PeriodMenu],
   template: `
     <section class="panel dashboard" aria-labelledby="dash-title">
       <div class="dash-head">
         <h2 id="dash-title">Dashboard</h2>
-        <label class="period">
-          <span class="sr-only">Period for paid money</span>
-          <select [value]="state.period()" (change)="setPeriod($event)">
-            <option value="this_month">This month</option>
-            <option value="last_month">Last month</option>
-            <option value="last_30_days">Last 30 days</option>
-            <option value="all">All time</option>
-          </select>
-        </label>
+        <app-period-menu [value]="state.period()" (changed)="state.setPeriod($event)" />
       </div>
 
       @if (state.loadError()) {
@@ -106,10 +99,6 @@ export class Dashboard {
   protected readonly state = inject(AppState);
   protected readonly refreshing = signal('');
   protected readonly bucketOf = bucket;
-
-  protected setPeriod(e: Event): void {
-    this.state.setPeriod((e.target as HTMLSelectElement).value as Period);
-  }
 
   protected async refresh(id: string): Promise<void> {
     this.refreshing.set(id);

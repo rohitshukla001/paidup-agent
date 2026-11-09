@@ -6,7 +6,7 @@ PaidUp is an entry for the PayPal AI Hackathon 2026. It runs against the PayPal 
 
 ## What it does
 
-You write "Bill Jane at jane@example.com 450 USD for a landing page, due in 7 days." PaidUp answers with an invoice card: the client, the line items, the total, and the due date. Approve it, and the server creates the invoice in PayPal, sends it, and puts the payer link on the card. Reject it, and nothing reaches PayPal.
+You write "Bill John at john@example.com 450 USD for a landing page, due in 7 days." PaidUp answers with an invoice card: the client, the line items, the total, and the due date. Approve it, and the server creates the invoice in PayPal, sends it, and puts the payer link on the card. Reject it, and nothing reaches PayPal.
 
 From there, PaidUp keeps watch:
 
@@ -14,7 +14,7 @@ From there, PaidUp keeps watch:
 - **Live payment status.** When the client pays, PayPal sends a webhook. The dashboard changes the invoice to PAID as soon as the webhook arrives, with no reload.
 - **Overdue reminders.** Every hour, the server looks for overdue invoices. For each one, Gemini writes a short, polite reminder, and PaidUp shows it as a card for you to approve.
 - **Questions about money.** Ask "Who owes me money?" or "What did I get paid last month?" The answer comes from your PayPal invoices, not from the model's memory.
-- **Reminders and cancels on request.** "Remind Jane about her invoice" or "Cancel the invoice to Jane" gives you a card too. Nothing changes in PayPal until you approve it.
+- **Reminders and cancels on request.** "Remind John about his invoice" or "Cancel the invoice to John" gives you a card too. Nothing changes in PayPal until you approve it.
 
 ## Why the approval step matters
 

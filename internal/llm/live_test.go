@@ -142,14 +142,14 @@ func TestLiveChatToolCallRoundTrip(t *testing.T) {
 		contract.Turn{Role: "user", Results: []contract.FuncResult{{
 			Name: "list_invoices",
 			Output: map[string]any{"invoices": []map[string]any{
-				{"number": "0007", "client": "Jane", "total": "450.00 USD"}}},
+				{"number": "0007", "client": "John", "total": "450.00 USD"}}},
 		}}})
 	second, err := c.Chat(ctx, contract.ChatRequest{
 		System: "Use the tools to answer.", History: history, Tools: tools})
 	if err != nil {
 		t.Fatalf("second turn (signature round trip): %v", err)
 	}
-	if !strings.Contains(second.Text, "0007") && !strings.Contains(second.Text, "Jane") {
+	if !strings.Contains(second.Text, "0007") && !strings.Contains(second.Text, "John") {
 		t.Errorf("answer does not use the tool result: %q", second.Text)
 	}
 }
